@@ -51,13 +51,13 @@ NSString *const kGPUImageGaussianBlurFragmentShaderString = SHADER_STRING
      sum += texture2D(inputImageTexture, blurCoordinates[1]) * 0.09;
      sum += texture2D(inputImageTexture, blurCoordinates[2]) * 0.12;
      sum += texture2D(inputImageTexture, blurCoordinates[3]) * 0.15;
-     sum += texture2D(inputImageTexture, blurCoordinates[4]) * 0.18;
+     sum += texture2D(inputImageTexture, blurCoordinates[4]) * 0.16;
      sum += texture2D(inputImageTexture, blurCoordinates[5]) * 0.15;
      sum += texture2D(inputImageTexture, blurCoordinates[6]) * 0.12;
      sum += texture2D(inputImageTexture, blurCoordinates[7]) * 0.09;
      sum += texture2D(inputImageTexture, blurCoordinates[8]) * 0.05;
 
- 	gl_FragColor = sum;
+ 	gl_FragColor = vec4((sum.rgb + vec3(0.1)), sum.w);
  }
 );
 #else

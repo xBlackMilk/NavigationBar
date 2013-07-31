@@ -14,6 +14,96 @@
 #import "GPUImage.h"
 #import "SGBlurView.h"
 
+static NSString * const kHorizontalGaussianVertexShader = SHADER_STRING
+(
+ attribute vec4 position;
+ attribute vec4 inputTextureCoordinate;
+ 
+ varying vec2 vTexCoord;
+ void main(void) {
+   gl_Position = position;
+   
+   // Clean up inaccuracies
+   vec2 Pos;
+   Pos = sign(gl_Vertex.xy);
+   
+   gl_Position = vec4(Pos, 0.0, 1.0);
+   // Image-space
+   vTexCoord = Pos * 0.5 + 0.5;
+ }
+ );
+
+static NSString * const kHorizontalGaussianFragmentShader = SHADER_STRING
+(
+ uniform sampler2D inputImageTexture; // the texture with the scene you want to blur
+ varying highp vec2 vTexCoord;
+ 
+ const highp float blurSize = 1.0/512.0; // I've chosen this size because this will result in that every step will be one pixel wide if the inputImageTexture texture is of size 512x512
+ 
+ void main(void)
+{
+  lowp vec4 sum = vec4(0.0);
+  
+  // blur in y (vertical)
+  // take nine samples, with the distance blurSize between them
+  sum += texture2D(inputImageTexture, vec2(vTexCoord.x - 4.0*blurSize, vTexCoord.y)) * 0.05;
+  sum += texture2D(inputImageTexture, vec2(vTexCoord.x - 3.0*blurSize, vTexCoord.y)) * 0.09;
+  sum += texture2D(inputImageTexture, vec2(vTexCoord.x - 2.0*blurSize, vTexCoord.y)) * 0.12;
+  sum += texture2D(inputImageTexture, vec2(vTexCoord.x - blurSize, vTexCoord.y)) * 0.15;
+  sum += texture2D(inputImageTexture, vec2(vTexCoord.x, vTexCoord.y)) * 0.16;
+  sum += texture2D(inputImageTexture, vec2(vTexCoord.x + blurSize, vTexCoord.y)) * 0.15;
+  sum += texture2D(inputImageTexture, vec2(vTexCoord.x + 2.0*blurSize, vTexCoord.y)) * 0.12;
+  sum += texture2D(inputImageTexture, vec2(vTexCoord.x + 3.0*blurSize, vTexCoord.y)) * 0.09;
+  sum += texture2D(inputImageTexture, vec2(vTexCoord.x + 4.0*blurSize, vTexCoord.y)) * 0.05;
+  
+  gl_FragColor = sum;
+}
+ );
+
+static NSString * const kVerticalGaussianVertexShader = SHADER_STRING
+(
+ varying vec2 vTexCoord;
+ 
+ // remember that you should draw a screen aligned quad
+ void main(void)
+{
+  gl_Position = ftransform();;
+  
+  // Clean up inaccuracies
+  vec2 Pos;
+  Pos = sign(gl_Vertex.xy);
+  
+  gl_Position = vec4(Pos, 0.0, 1.0);
+  // Image-space
+  vTexCoord = Pos * 0.5 + 0.5;
+});
+static NSString * const kVerticalGaussianFragmentShader = SHADER_STRING
+(
+ uniform sampler2D RTBlurH; // this should hold the texture rendered by the horizontal blur pass
+ varying vec2 vTexCoord;
+ 
+ const float blurSize = 1.0/512.0;
+ 
+ void main(void)
+{
+  vec4 sum = vec4(0.0);
+  
+  // blur in y (vertical)
+  // take nine samples, with the distance blurSize between them
+  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y - 4.0*blurSize)) * 0.05;
+  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y - 3.0*blurSize)) * 0.09;
+  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y - 2.0*blurSize)) * 0.12;
+  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y - blurSize)) * 0.15;
+  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y)) * 0.16;
+  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y + blurSize)) * 0.15;
+  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y + 2.0*blurSize)) * 0.12;
+  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y + 3.0*blurSize)) * 0.09;
+  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y + 4.0*blurSize)) * 0.05;
+  
+  gl_FragColor = sum;
+}
+ );
+
 typedef enum {
   SGBlurMethodToolbar,
   SGBlurMethodGPUImage,
@@ -42,16 +132,16 @@ typedef enum {
     
     [_photoView addObserver:self forKeyPath:@"image" options:NSKeyValueObservingOptionNew context:NULL];
     
-    self.blurMethod = SGBlurMethodEvil;
+    self.blurMethod = SGBlurMethodGPUImage;
     
     CGRect blurFrame = self.bounds;
     blurFrame.size.height /= 4;
     blurFrame.origin.y = self.bounds.size.height - blurFrame.size.height;
     UIViewAutoresizing blurAutoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     if (self.blurMethod == SGBlurMethodToolbar) {
-      UIView *toolbar = [[UIToolbar alloc] initWithFrame:blurFrame];
+      UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame:blurFrame];
       toolbar.autoresizingMask = blurAutoresizingMask;
-      toolbar.tintColor = [UIColor colorWithWhite:.0 alpha:01];
+      toolbar.barTintColor = [UIColor colorWithWhite:1.0 alpha:.0];
       [self.contentView addSubview:toolbar];
     }
     else if (self.blurMethod == SGBlurMethodEvil) {
@@ -68,14 +158,15 @@ typedef enum {
     }
     
     if (self.blurMethod == SGBlurMethodGPUImage) {
-      _gpuImageView = [[GPUImageView alloc] initWithFrame:_photoView.frame];
-      _gpuImageView.autoresizingMask = _photoView.autoresizingMask;
-      [self.contentView addSubview:_gpuImageView];
-      
       GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
-      blur.blurPasses = 1;
+      blur.blurPasses = 2;
       blur.blurSize = 1.5;
       _gpuFilter = blur;
+        
+        UIView *overlay = [[UIView alloc] initWithFrame:blurFrame];
+        overlay.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.15];
+        overlay.autoresizingMask = blurAutoresizingMask;
+        [self.contentView addSubview:overlay];
     }
   }
   return self;
@@ -106,10 +197,36 @@ typedef enum {
 }
 
 - (UIImage *)blurImageAccelerate:(UIImage *)image {
-  return [image applyBlurWithRadius:6 tintColor:[UIColor colorWithWhite:0.3 alpha:0.3] saturationDeltaFactor:1.3 maskImage:nil];
+  return [image applyBlurWithRadius:5 tintColor:[UIColor colorWithWhite:0.1 alpha:0.15] saturationDeltaFactor:1.4 maskImage:nil];
 }
 
 - (UIImage *)blurImageGPU:(UIImage *)image {
+//  CGFloat blurRadius = 6.0;
+//  CGFloat inputRadius = blurRadius * [[UIScreen mainScreen] scale];
+//  NSUInteger radius = floor(inputRadius * 3. * sqrt(2 * M_PI) / 4 + 0.5);
+//  if (radius % 2 != 1) {
+//    radius += 1; // force radius to be odd so that the three box-blur methodology works.
+//  }
+//  radius = 1;
+//  
+//  GPUImagePicture *gpuImage = [[GPUImagePicture alloc] initWithImage:image];
+//  GPUImageBoxBlurFilter *filter1 = [[GPUImageBoxBlurFilter alloc] init];
+//  GPUImageBoxBlurFilter *filter2 = [[GPUImageBoxBlurFilter alloc] init];
+//  GPUImageBoxBlurFilter *filter3 = [[GPUImageBoxBlurFilter alloc] init];
+//  GPUImageBrightnessFilter *filter4 = [[GPUImageBrightnessFilter alloc] init];
+//  filter4.brightness = 0.1;
+//  filter1.blurSize = radius;
+//  filter2.blurSize = radius;
+//  filter3.blurSize = radius;
+//  [gpuImage addTarget:filter1];
+//  [filter1 addTarget:filter2];
+//  [filter2 addTarget:filter3];
+//  [filter3 addTarget:filter4];
+  
+//  [gpuImage processImage];
+//  CGImageRef cgImage = [filter4 newCGImageFromCurrentlyProcessedOutput];
+//  UIImage *blurImage = [UIImage imageWithCGImage:cgImage scale:[image scale] orientation:[image imageOrientation]];
+//  return blurImage;
   return [self.gpuFilter imageByFilteringImage:image];
   return image;
 }
@@ -120,6 +237,47 @@ typedef enum {
 
 @end
 
+
+@interface SGExploreTitleView : UIView
+@property (nonatomic, readonly) UILabel *titleLabel;
+@property (nonatomic, readonly) UILabel *detailLabel;
+@property (nonatomic) CGFloat transitionPercent;
+@end
+
+@implementation SGExploreTitleView
+- (id)initWithFrame:(CGRect)frame {
+  self = [super initWithFrame:frame];
+  if (self) {
+    _titleLabel = [[UILabel alloc] initWithFrame:frame];
+    _detailLabel = [[UILabel alloc] initWithFrame:frame];
+    UIViewAutoresizing autoresize = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    _titleLabel.autoresizingMask = autoresize;
+    _detailLabel.autoresizingMask = autoresize;
+    [self addSubview:_titleLabel];
+    [self addSubview:_detailLabel];
+    self.transitionPercent = 0.0;
+  }
+  return self;
+}
+
+- (CGSize)sizeThatFits:(CGSize)size {
+  CGSize titleSize = [self.titleLabel sizeThatFits:size];
+  CGSize detailSize = [self.detailLabel sizeThatFits:size];
+  CGFloat maxWidth = fmaxf(titleSize.width, detailSize.width);
+  CGFloat maxHeight = fmaxf(titleSize.height, detailSize.height);
+  return CGSizeMake(maxWidth, maxHeight);
+}
+
+- (void)setTransitionPercent:(CGFloat)transitionPercent {
+  _transitionPercent = transitionPercent;
+  
+  self.titleLabel.alpha = 1.0 - transitionPercent;
+  self.detailLabel.alpha = transitionPercent;
+}
+
+@end
+
+
 @interface SGMasterViewController () <UITableViewDataSource, UITableViewDelegate, UINavigationControllerDelegate, UIViewControllerAnimatedTransitioning>
 @property (nonatomic, strong) NSMutableArray *objects;
 @property (nonatomic, strong) UIView *header;
@@ -128,6 +286,7 @@ typedef enum {
 @property (nonatomic) UINavigationControllerOperation navigationOperation;
 @property (nonatomic, strong) SGViewTableViewController *viewTable;
 @property (nonatomic) BOOL manageBarHeight;
+@property (nonatomic, strong) SGExploreTitleView *titleView;
 @end
 
 @implementation SGMasterViewController
@@ -189,7 +348,11 @@ typedef enum {
   [super viewDidLoad];
   
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(insertNewObject:)];
-  self.navigationItem.title = @"Photos";
+  self.titleView = [[SGExploreTitleView alloc] init];
+  self.titleView.titleLabel.text = @"Explore";
+  self.titleView.detailLabel.text = @"Popular";
+  [self.titleView sizeToFit];
+  self.navigationItem.titleView = self.titleView;
   
   self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Views" style:UIBarButtonItemStylePlain target:self action:@selector(toggleViewTable)];
   
@@ -368,13 +531,15 @@ typedef enum {
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+  CGFloat fade = scrollView.contentOffset.y / 100.0;
+  self.titleView.transitionPercent = fade;
   if (![self.header respondsToSelector:@selector(setImage:)]) return;
   UIGraphicsBeginImageContextWithOptions(self.header.frame.size, NO, [[UIScreen mainScreen] scale]);
   CGRect drawRect = self.header.frame;// [self.view convertRect:self.header.frame toView:self.tableView];
   drawRect.size = self.tableView.frame.size;
   drawRect.origin.x *= -1;
   drawRect.origin.y *= -1;
-  [self.tableView drawViewHierarchyInRect:drawRect];
+  [self.tableView drawViewHierarchyInRect:drawRect afterScreenUpdates:NO];
   UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
   UIGraphicsEndImageContext();
   UIColor *barColor = self.navigationController.navigationBar.barTintColor;
