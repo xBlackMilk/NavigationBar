@@ -112,6 +112,72 @@ typedef enum {
   SGBlurMethodCoreImage
 } SGBlurMethod;
 
+@interface SGImageBlurOperation : NSOperation {
+    BOOL _isExecuting;
+    BOOL _isFinished;
+}
+@property (nonatomic, strong) UIImage *inputImage;
+@property (nonatomic, copy) void (^renderCompletion)(UIImage *);
+@property (nonatomic, readonly) BOOL isExecuting;
+@property (nonatomic, readonly) BOOL isFinished;
+@property (nonatomic) CGRect cropRect;
+@end
+@implementation SGImageBlurOperation
+
+- (void)start {
+    if ([self isCancelled]) {
+        [self prepareExit];
+        return;
+    }
+    
+    [self willChangeValueForKey:@"isExecuting"];
+    _isExecuting = YES;
+    [self didChangeValueForKey:@"isExecuting"];
+    
+    GPUImagePicture *gpuImage = [[GPUImagePicture alloc] initWithImage:self.inputImage];
+    
+    GPUImageCropFilter *cropper = [[GPUImageCropFilter alloc] initWithCropRegion:self.cropRect];
+    
+    GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
+    blur.blurPasses = 2;
+    blur.blurSize = 1.5;
+    
+    [gpuImage addTarget:cropper];
+    [cropper addTarget:blur];
+    [gpuImage processImage];
+    
+    if ([self isCancelled]) {
+        [self prepareExit];
+        return;
+    }
+    
+//    UIImage *outputImage = [blur imageByFilteringImage:self.inputImage];
+    CGImageRef cgImage = [blur newCGImageFromCurrentlyProcessedOutput];
+    UIImage *outputImage = [UIImage imageWithCGImage:cgImage scale:self.inputImage.scale orientation:self.inputImage.imageOrientation];
+    CGImageRelease(cgImage);
+    
+    if ([self isCancelled]) {
+        [self prepareExit];
+        return;
+    }
+    
+    self.renderCompletion(outputImage);
+    [self prepareExit];
+}
+
+- (void)prepareExit {
+    [self willChangeValueForKey:@"isExecuting"];
+    [self willChangeValueForKey:@"isFinished"];
+    _isExecuting = NO;
+    _isFinished = YES;
+    [self didChangeValueForKey:@"isExecuting"];
+    [self didChangeValueForKey:@"isFinished"];
+}
+
+@end
+
+static NSOperationQueue *kBlurringOperationQueue;
+
 @interface SGTableViewCell : UITableViewCell
 @property (nonatomic, readonly) UIImageView *photoView;
 @property (nonatomic, readonly) UIImageView *blurPanel;
@@ -120,6 +186,7 @@ typedef enum {
 @property (nonatomic, readonly) GPUImageFilter *gpuFilter;
 @property (nonatomic, readonly) GPUImagePicture *gpuSource;
 @property (nonatomic) SGBlurMethod blurMethod;
+@property (nonatomic, strong) SGImageBlurOperation *blurOperation;
 @end
 
 @implementation SGTableViewCell
@@ -138,6 +205,7 @@ typedef enum {
     blurFrame.size.height /= 4;
     blurFrame.origin.y = self.bounds.size.height - blurFrame.size.height;
     UIViewAutoresizing blurAutoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+      
     if (self.blurMethod == SGBlurMethodToolbar) {
       UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame:blurFrame];
       toolbar.autoresizingMask = blurAutoresizingMask;
@@ -155,6 +223,9 @@ typedef enum {
       _blurPanel.autoresizingMask = blurAutoresizingMask;
       _blurPanel.clipsToBounds = YES;
       [self.contentView addSubview:_blurPanel];
+        
+        kBlurringOperationQueue = [[NSOperationQueue alloc] init];
+        kBlurringOperationQueue.maxConcurrentOperationCount = 1;
     }
     
     if (self.blurMethod == SGBlurMethodGPUImage) {
@@ -227,6 +298,20 @@ typedef enum {
 //  CGImageRef cgImage = [filter4 newCGImageFromCurrentlyProcessedOutput];
 //  UIImage *blurImage = [UIImage imageWithCGImage:cgImage scale:[image scale] orientation:[image imageOrientation]];
 //  return blurImage;
+    
+    [self.blurOperation cancel];
+    
+    __weak SGTableViewCell *weakSelf = self;
+    self.blurOperation = [[SGImageBlurOperation alloc] init];
+    self.blurOperation.inputImage = image;
+    self.blurOperation.cropRect = CGRectMake(0, 0.75, 1, .25);
+    self.blurOperation.renderCompletion = ^(UIImage *outputImage) {
+        [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+            weakSelf.blurPanel.image = outputImage;
+        }];
+    };
+    [kBlurringOperationQueue addOperation:self.blurOperation];
+    return nil;
   return [self.gpuFilter imageByFilteringImage:image];
   return image;
 }
@@ -351,6 +436,8 @@ typedef enum {
   self.titleView = [[SGExploreTitleView alloc] init];
   self.titleView.titleLabel.text = @"Explore";
   self.titleView.detailLabel.text = @"Popular";
+    self.titleView.titleLabel.textColor = self.titleView.detailLabel.textColor = [UIColor whiteColor];
+    
   [self.titleView sizeToFit];
   self.navigationItem.titleView = self.titleView;
   
@@ -367,9 +454,22 @@ typedef enum {
   if (0) { // Capture, blur, and display manually
     self.header = [[UIImageView alloc] init];
   }
-  else if (0) { // Toolbar
-    UIToolbar *header = [[UIToolbar alloc] init];
-    header.barTintColor = self.navigationController.navigationBar.barTintColor;
+  else if (1) { // Toolbar
+    UINavigationBar *header = [[UINavigationBar alloc] init];
+//    header.barTintColor = self.navigationController.navigationBar.barTintColor;
+      [header setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
+      [header setShadowImage:[UIImage imageNamed:@"clearpix"]];
+      UISegmentedControl *segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Topics",@"Popular",@"Recent"]];
+      segmentedControl.backgroundColor = [UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
+      segmentedControl.tintColor = [UIColor colorWithWhite:1 alpha:1];//[UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
+      segmentedControl.selectedSegmentIndex = 1;
+      CGRect frame = segmentedControl.frame;
+      frame.size.width = self.view.bounds.size.width - 20.0;
+      segmentedControl.frame = frame;
+      header.items = @[[[UINavigationItem alloc] init]];
+      [header.items[0] setTitleView:segmentedControl];
+      [segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventTouchUpInside];
+//      [header setItems:@[[[UIBarButtonItem alloc] initWithCustomView:segmentedControl]]];
     self.header = header;
   }
   else if (0) { // Use personal nav bar
@@ -398,6 +498,12 @@ typedef enum {
 //  self.navigationController.delegate = self;
   
   srand(time(NULL));
+}
+
+- (void)segmentSelected:(UISegmentedControl *)sender {
+    NSString *newTitle = [sender titleForSegmentAtIndex:sender.selectedSegmentIndex];
+    self.titleView.detailLabel.text = newTitle;
+    [self.titleView sizeToFit];
 }
 
 - (NSArray *)buttonsInNavBar:(UINavigationBar *)bar {
@@ -531,7 +637,7 @@ typedef enum {
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
-  CGFloat fade = scrollView.contentOffset.y / 100.0;
+  CGFloat fade = scrollView.contentOffset.y / self.header.frame.size.height;
   self.titleView.transitionPercent = fade;
   if (![self.header respondsToSelector:@selector(setImage:)]) return;
   UIGraphicsBeginImageContextWithOptions(self.header.frame.size, NO, [[UIScreen mainScreen] scale]);
