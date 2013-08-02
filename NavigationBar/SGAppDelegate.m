@@ -27,6 +27,7 @@
   UINavigationBar *bar = nav.navigationBar;
   [bar setShadowImage:[UIImage imageNamed:@"clearpix"]];
   [bar setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
+//    bar.barTintColor = [UIColor orangeColor];
   nav.navigationBar.tintColor = [UIColor whiteColor];
   [nav.navigationBar setTitleTextAttributes:@{NSForegroundColorAttributeName : [UIColor whiteColor]}];
   nav.viewControllers = @[[[SGMasterViewController alloc] init]];

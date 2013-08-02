@@ -323,13 +323,13 @@ static NSOperationQueue *kBlurringOperationQueue;
 @end
 
 
-@interface SGExploreTitleView : UIView
+@interface SGCrossfadingLabelView : UIView
 @property (nonatomic, readonly) UILabel *titleLabel;
 @property (nonatomic, readonly) UILabel *detailLabel;
-@property (nonatomic) CGFloat transitionPercent;
+@property (nonatomic) CGFloat crossFade;
 @end
 
-@implementation SGExploreTitleView
+@implementation SGCrossfadingLabelView
 - (id)initWithFrame:(CGRect)frame {
   self = [super initWithFrame:frame];
   if (self) {
@@ -338,9 +338,11 @@ static NSOperationQueue *kBlurringOperationQueue;
     UIViewAutoresizing autoresize = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     _titleLabel.autoresizingMask = autoresize;
     _detailLabel.autoresizingMask = autoresize;
+      _titleLabel.textAlignment = NSTextAlignmentCenter;
+      _detailLabel.textAlignment = NSTextAlignmentCenter;
     [self addSubview:_titleLabel];
     [self addSubview:_detailLabel];
-    self.transitionPercent = 0.0;
+      [self updateAlphas];
   }
   return self;
 }
@@ -353,17 +355,22 @@ static NSOperationQueue *kBlurringOperationQueue;
   return CGSizeMake(maxWidth, maxHeight);
 }
 
-- (void)setTransitionPercent:(CGFloat)transitionPercent {
-  _transitionPercent = transitionPercent;
-  
-  self.titleLabel.alpha = 1.0 - transitionPercent;
-  self.detailLabel.alpha = transitionPercent;
+- (void)setCrossFade:(CGFloat)crossFade {
+    crossFade = fminf(1.0, fmaxf(0.0, crossFade));
+    if (crossFade == _crossFade) return;
+    _crossFade = crossFade;
+    [self updateAlphas];
+}
+
+- (void)updateAlphas {
+    self.titleLabel.alpha = 1.0 - self.crossFade;
+    self.detailLabel.alpha = self.crossFade;
 }
 
 @end
 
 
-@interface SGMasterViewController () <UITableViewDataSource, UITableViewDelegate, UINavigationControllerDelegate, UIViewControllerAnimatedTransitioning>
+@interface SGMasterViewController () <UITableViewDataSource, UITableViewDelegate>// UINavigationControllerDelegate, UIViewControllerAnimatedTransitioning>
 @property (nonatomic, strong) NSMutableArray *objects;
 @property (nonatomic, strong) UIView *header;
 @property (nonatomic, strong) UITableView *tableView;
@@ -371,7 +378,8 @@ static NSOperationQueue *kBlurringOperationQueue;
 @property (nonatomic) UINavigationControllerOperation navigationOperation;
 @property (nonatomic, strong) SGViewTableViewController *viewTable;
 @property (nonatomic) BOOL manageBarHeight;
-@property (nonatomic, strong) SGExploreTitleView *titleView;
+@property (nonatomic, strong) SGCrossfadingLabelView *titleView;
+@property (nonatomic) CGPoint lastTableContentOffset;
 @end
 
 @implementation SGMasterViewController
@@ -433,7 +441,7 @@ static NSOperationQueue *kBlurringOperationQueue;
   [super viewDidLoad];
   
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(insertNewObject:)];
-  self.titleView = [[SGExploreTitleView alloc] init];
+  self.titleView = [[SGCrossfadingLabelView alloc] init];
   self.titleView.titleLabel.text = @"Explore";
   self.titleView.detailLabel.text = @"Popular";
     self.titleView.titleLabel.textColor = self.titleView.detailLabel.textColor = [UIColor whiteColor];
@@ -455,21 +463,21 @@ static NSOperationQueue *kBlurringOperationQueue;
     self.header = [[UIImageView alloc] init];
   }
   else if (1) { // Toolbar
-    UINavigationBar *header = [[UINavigationBar alloc] init];
-//    header.barTintColor = self.navigationController.navigationBar.barTintColor;
+      UINavigationBar *header = [[UINavigationBar alloc] init];
       [header setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
-      [header setShadowImage:[UIImage imageNamed:@"clearpix"]];
+//      [header setShadowImage:[UIImage imageNamed:@"clearpix"]];
+      header.barTintColor = [UIColor orangeColor];
       UISegmentedControl *segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Topics",@"Popular",@"Recent"]];
-      segmentedControl.backgroundColor = [UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
+      segmentedControl.backgroundColor = [UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
       segmentedControl.tintColor = [UIColor colorWithWhite:1 alpha:1];//[UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
       segmentedControl.selectedSegmentIndex = 1;
+      [segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
       CGRect frame = segmentedControl.frame;
       frame.size.width = self.view.bounds.size.width - 20.0;
       segmentedControl.frame = frame;
       header.items = @[[[UINavigationItem alloc] init]];
       [header.items[0] setTitleView:segmentedControl];
-      [segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventTouchUpInside];
-//      [header setItems:@[[[UIBarButtonItem alloc] initWithCustomView:segmentedControl]]];
+      [header addSubview:segmentedControl];
     self.header = header;
   }
   else if (0) { // Use personal nav bar
@@ -637,23 +645,54 @@ static NSOperationQueue *kBlurringOperationQueue;
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
-  CGFloat fade = scrollView.contentOffset.y / self.header.frame.size.height;
-  self.titleView.transitionPercent = fade;
-  if (![self.header respondsToSelector:@selector(setImage:)]) return;
-  UIGraphicsBeginImageContextWithOptions(self.header.frame.size, NO, [[UIScreen mainScreen] scale]);
-  CGRect drawRect = self.header.frame;// [self.view convertRect:self.header.frame toView:self.tableView];
-  drawRect.size = self.tableView.frame.size;
-  drawRect.origin.x *= -1;
-  drawRect.origin.y *= -1;
-  [self.tableView drawViewHierarchyInRect:drawRect afterScreenUpdates:NO];
-  UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
-  UIGraphicsEndImageContext();
-  UIColor *barColor = self.navigationController.navigationBar.barTintColor;
-  CGFloat r,g,b;
-  [barColor getRed:&r green:&g blue:&b alpha:NULL];
-  UIColor *tintColor = [UIColor colorWithRed:r green:g blue:b alpha:0.6];
-  image = [image applyBlurWithRadius:30 tintColor:tintColor saturationDeltaFactor:1.8 maskImage:nil];
-  ((UIImageView*)self.header).image = image;
+    CGFloat normalizedOffset = scrollView.contentOffset.y + scrollView.contentInset.top;
+    CGFloat fade = normalizedOffset / self.header.frame.size.height;
+    self.titleView.crossFade = fade;
+    
+    if (scrollView.isDragging || scrollView.isDecelerating) {
+        CGFloat visibleHeight = CGRectGetMaxY(self.navigationController.navigationBar.frame);
+        CGFloat hiddenHeight = visibleHeight - self.header.frame.size.height;
+        BOOL headerVisible = self.header.frame.origin.y > hiddenHeight;
+        BOOL offsetInBounds = normalizedOffset > 0 && normalizedOffset < scrollView.contentSize.height - scrollView.bounds.size.height;
+        BOOL offsetNearTop = normalizedOffset < self.header.frame.size.height;
+        
+        if (offsetNearTop || (offsetInBounds && (headerVisible || scrollView.isDecelerating))) {
+            CGRect frame = self.header.frame;
+            CGFloat newHeaderY = frame.origin.y;
+            
+            if (offsetNearTop) {
+                newHeaderY = fmaxf(visibleHeight - normalizedOffset, newHeaderY);
+            }
+            else {
+                CGFloat distance = self.lastTableContentOffset.y - scrollView.contentOffset.y;
+                newHeaderY = frame.origin.y + distance;
+            }
+            
+            newHeaderY = fmaxf(hiddenHeight, fminf(visibleHeight, newHeaderY));
+            frame.origin.y = newHeaderY;
+            self.header.frame = frame;
+            self.titleView.crossFade = (visibleHeight - newHeaderY) / (visibleHeight - hiddenHeight);
+        }
+    }
+    
+    self.lastTableContentOffset = scrollView.contentOffset;
+    
+    if (![self.header respondsToSelector:@selector(setImage:)]) return;
+    
+    UIGraphicsBeginImageContextWithOptions(self.header.frame.size, NO, [[UIScreen mainScreen] scale]);
+    CGRect drawRect = self.header.frame;// [self.view convertRect:self.header.frame toView:self.tableView];
+    drawRect.size = self.tableView.frame.size;
+    drawRect.origin.x *= -1;
+    drawRect.origin.y *= -1;
+    [self.tableView drawViewHierarchyInRect:drawRect afterScreenUpdates:NO];
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    UIColor *barColor = self.navigationController.navigationBar.barTintColor;
+    CGFloat r,g,b;
+    [barColor getRed:&r green:&g blue:&b alpha:NULL];
+    UIColor *tintColor = [UIColor colorWithRed:r green:g blue:b alpha:0.6];
+    image = [image applyBlurWithRadius:30 tintColor:tintColor saturationDeltaFactor:1.8 maskImage:nil];
+    ((UIImageView*)self.header).image = image;
 }
 
 @end
