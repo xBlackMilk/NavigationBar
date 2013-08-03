@@ -481,6 +481,7 @@
 				GCC_PREFIX_HEADER = "NavigationBar/NavigationBar-Prefix.pch";
 				HEADER_SEARCH_PATHS = "GPUImage/**";
 				INFOPLIST_FILE = "NavigationBar/NavigationBar-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -496,6 +497,7 @@
 				GCC_PREFIX_HEADER = "NavigationBar/NavigationBar-Prefix.pch";
 				HEADER_SEARCH_PATHS = "GPUImage/**";
 				INFOPLIST_FILE = "NavigationBar/NavigationBar-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};

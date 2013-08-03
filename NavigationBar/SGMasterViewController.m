@@ -369,6 +369,94 @@ static NSOperationQueue *kBlurringOperationQueue;
 
 @end
 
+@interface SGShrinkingSegmentedControlPanel : UIView
+@property (nonatomic, readonly) UISegmentedControl *segmentedControl;
+@property (nonatomic, readonly) UILabel *shrinkLabel;
+@property (nonatomic) CGFloat shrinkage;
+@end
+
+@interface SGShrinkingSegmentedControlPanel ()
+@property (nonatomic, getter = isAdjustingShrinkage) BOOL adjustingShrinkage;
+@property (nonatomic, readonly) CGFloat maxShrinkage;
+@property (nonatomic) CGRect fullFrame;
+@end
+
+@implementation SGShrinkingSegmentedControlPanel
+
+- (id)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        _segmentedControl = [[UISegmentedControl alloc] initWithItems:@[]];
+        _segmentedControl.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin;
+        _shrinkLabel = [[UILabel alloc] init];
+        _shrinkLabel.textAlignment = NSTextAlignmentCenter;
+        [self addSubview:self.segmentedControl];
+        [self addSubview:self.shrinkLabel];
+        [self updateSegmentedControlFrame];
+        self.clipsToBounds = YES;
+    }
+    return self;
+}
+
+- (void)setFrame:(CGRect)frame {
+    BOOL sizeChange = !CGSizeEqualToSize(frame.size, self.frame.size);
+    [super setFrame:frame];
+    
+    if (sizeChange && !self.adjustingShrinkage) {
+        self.fullFrame = frame;
+        [self updateSegmentedControlFrame];
+    }
+}
+
+- (void)updateSegmentedControlFrame {
+    CGFloat horizontalInsets = 10.0;
+    CGFloat verticalInsets = (self.bounds.size.height - self.segmentedControl.frame.size.height) / 2;
+    CGRect frame = CGRectInset(self.bounds, horizontalInsets, verticalInsets);
+    frame.size.height = self.segmentedControl.frame.size.height;
+    self.segmentedControl.frame = frame;
+}
+
+- (CGFloat)maxShrinkage {
+    return floor(self.fullFrame.size.height / 2.0);
+}
+
+- (void)setShrinkage:(CGFloat)shrinkage {
+    shrinkage = fmaxf(0, fminf([self maxShrinkage], shrinkage));
+    if (shrinkage == _shrinkage) return;
+    _shrinkage = shrinkage;
+    [self updateShrinkage];
+}
+
+- (void)updateShrinkage {
+    self.adjustingShrinkage = YES;
+    
+    CGRect frame = self.fullFrame;
+    frame.size.height -= self.shrinkage;
+    self.frame = frame;
+    
+    CGFloat alpha = self.shrinkage / [self maxShrinkage];
+    self.shrinkLabel.alpha = alpha;
+    self.segmentedControl.alpha = 1 - alpha;
+    
+    self.shrinkLabel.text = [self.segmentedControl titleForSegmentAtIndex:self.segmentedControl.selectedSegmentIndex];
+    frame = self.segmentedControl.frame;
+    frame.size.width /= self.segmentedControl.numberOfSegments;
+    frame.origin.x += frame.size.width * self.segmentedControl.selectedSegmentIndex;
+    self.shrinkLabel.frame = frame;
+    
+//    CGFloat shrinkFactor = frame.size.height / self.fullFrame.size.height;
+//    self.segmentedControl.transform = CGAffineTransformMakeScale(shrinkFactor, shrinkFactor);
+//    self.segmentedControl.center = [self convertPoint:self.center fromView:[self superview]];
+    
+    self.adjustingShrinkage = NO;
+}
+
+@end
+
+typedef enum : NSInteger {
+    SGHeaderStyleHide,
+    SGHeaderStyleShrink
+} SGHeaderStyle;
 
 @interface SGMasterViewController () <UITableViewDataSource, UITableViewDelegate>// UINavigationControllerDelegate, UIViewControllerAnimatedTransitioning>
 @property (nonatomic, strong) NSMutableArray *objects;
@@ -380,6 +468,7 @@ static NSOperationQueue *kBlurringOperationQueue;
 @property (nonatomic) BOOL manageBarHeight;
 @property (nonatomic, strong) SGCrossfadingLabelView *titleView;
 @property (nonatomic) CGPoint lastTableContentOffset;
+@property (nonatomic) SGHeaderStyle headerStyle;
 @end
 
 @implementation SGMasterViewController
@@ -463,22 +552,41 @@ static NSOperationQueue *kBlurringOperationQueue;
     self.header = [[UIImageView alloc] init];
   }
   else if (1) { // Toolbar
-      UINavigationBar *header = [[UINavigationBar alloc] init];
-      [header setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
-//      [header setShadowImage:[UIImage imageNamed:@"clearpix"]];
-      header.barTintColor = [UIColor orangeColor];
-      UISegmentedControl *segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Topics",@"Popular",@"Recent"]];
-      segmentedControl.backgroundColor = [UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
-      segmentedControl.tintColor = [UIColor colorWithWhite:1 alpha:1];//[UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
-      segmentedControl.selectedSegmentIndex = 1;
-      [segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
-      CGRect frame = segmentedControl.frame;
-      frame.size.width = self.view.bounds.size.width - 20.0;
-      segmentedControl.frame = frame;
-      header.items = @[[[UINavigationItem alloc] init]];
-      [header.items[0] setTitleView:segmentedControl];
-      [header addSubview:segmentedControl];
-    self.header = header;
+      self.headerStyle = SGHeaderStyleShrink;
+      
+      if (self.headerStyle == SGHeaderStyleHide) {
+          UINavigationBar *header = [[UINavigationBar alloc] init];
+//          [header setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
+          [header setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarMetrics:UIBarMetricsDefault]; // iOS 6 friendly
+//          [header setShadowImage:[UIImage imageNamed:@"clearpix"]];
+          UISegmentedControl *segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Topics",@"Popular",@"Recent"]];
+          segmentedControl.backgroundColor = [UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
+          segmentedControl.tintColor = [UIColor colorWithWhite:1 alpha:1];//[UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
+          segmentedControl.selectedSegmentIndex = 1;
+          [segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
+          CGRect frame = segmentedControl.frame;
+          frame.size.width = self.view.bounds.size.width - 20.0;
+          segmentedControl.frame = frame;
+          header.items = @[[[UINavigationItem alloc] init]];
+          [header.items[0] setTitleView:segmentedControl];
+          [header addSubview:segmentedControl];
+          self.header = header;
+      }
+      else if (self.headerStyle == SGHeaderStyleShrink) {
+          SGShrinkingSegmentedControlPanel *header = [[SGShrinkingSegmentedControlPanel alloc] init];
+          header.backgroundColor = [UIColor colorWithRed:250.0/255.0 green:100.0/255.0 blue:14.0/255.0 alpha:1.0];
+          [header.segmentedControl insertSegmentWithTitle:@"Topics" atIndex:0 animated:NO];
+          [header.segmentedControl insertSegmentWithTitle:@"Popular" atIndex:1 animated:NO];
+          [header.segmentedControl insertSegmentWithTitle:@"Recent" atIndex:2 animated:NO];
+          header.segmentedControl.backgroundColor =[UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
+          header.segmentedControl.selectedSegmentIndex = 1;
+          [header.segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
+          header.tintColor = [UIColor whiteColor];
+          header.shrinkLabel.textColor = [UIColor whiteColor];
+          header.shrinkLabel.font = [UIFont systemFontOfSize:13];
+          
+          self.header = header;
+      }
   }
   else if (0) { // Use personal nav bar
     [self.navigationController setNavigationBarHidden:YES animated:NO];
@@ -644,34 +752,57 @@ static NSOperationQueue *kBlurringOperationQueue;
   [self.navigationController pushViewController:detailController animated:YES];
 }
 
+- (BOOL)scrollViewShouldScrollToTop:(UIScrollView *)scrollView {
+    CGRect frame = self.header.frame;
+    frame.origin.y = CGRectGetMaxY(self.navigationController.navigationBar.frame);
+    self.header.frame = frame;
+    return YES;
+}
+
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
-    CGFloat normalizedOffset = scrollView.contentOffset.y + scrollView.contentInset.top;
-    CGFloat fade = normalizedOffset / self.header.frame.size.height;
-    self.titleView.crossFade = fade;
-    
-    if (scrollView.isDragging || scrollView.isDecelerating) {
-        CGFloat visibleHeight = CGRectGetMaxY(self.navigationController.navigationBar.frame);
-        CGFloat hiddenHeight = visibleHeight - self.header.frame.size.height;
-        BOOL headerVisible = self.header.frame.origin.y > hiddenHeight;
-        BOOL offsetInBounds = normalizedOffset > 0 && normalizedOffset < scrollView.contentSize.height - scrollView.bounds.size.height;
-        BOOL offsetNearTop = normalizedOffset < self.header.frame.size.height;
+    if (self.headerStyle == SGHeaderStyleHide) {
+        CGFloat normalizedOffset = scrollView.contentOffset.y + scrollView.contentInset.top;
+        CGFloat fade = normalizedOffset / self.header.frame.size.height;
+        self.titleView.crossFade = fade;
         
-        if (offsetNearTop || (offsetInBounds && (headerVisible || scrollView.isDecelerating))) {
-            CGRect frame = self.header.frame;
-            CGFloat newHeaderY = frame.origin.y;
+        if (scrollView.isDragging || scrollView.isDecelerating) {
+            CGFloat visibleHeight = CGRectGetMaxY(self.navigationController.navigationBar.frame);
+            CGFloat hiddenHeight = visibleHeight - self.header.frame.size.height;
+            BOOL headerVisible = self.header.frame.origin.y > hiddenHeight;
+            BOOL offsetInBounds = normalizedOffset > 0 && normalizedOffset < scrollView.contentSize.height - scrollView.bounds.size.height;
+            BOOL offsetNearTop = normalizedOffset < self.header.frame.size.height;
+            BOOL decelerating = scrollView.isDecelerating && !scrollView.isTracking;
             
-            if (offsetNearTop) {
-                newHeaderY = fmaxf(visibleHeight - normalizedOffset, newHeaderY);
+            if (offsetNearTop || (offsetInBounds && (headerVisible || decelerating))) {
+                CGRect frame = self.header.frame;
+                CGFloat newHeaderY = frame.origin.y;
+                
+                if (offsetNearTop) {
+                    newHeaderY = fmaxf(visibleHeight - normalizedOffset, newHeaderY);
+                }
+                else {
+                    CGFloat distance = self.lastTableContentOffset.y - scrollView.contentOffset.y;
+                    newHeaderY = frame.origin.y + distance;
+                }
+                
+                newHeaderY = fmaxf(hiddenHeight, fminf(visibleHeight, newHeaderY));
+                frame.origin.y = newHeaderY;
+                self.header.frame = frame;
+                self.titleView.crossFade = (visibleHeight - newHeaderY) / (visibleHeight - hiddenHeight);
             }
-            else {
-                CGFloat distance = self.lastTableContentOffset.y - scrollView.contentOffset.y;
-                newHeaderY = frame.origin.y + distance;
-            }
-            
-            newHeaderY = fmaxf(hiddenHeight, fminf(visibleHeight, newHeaderY));
-            frame.origin.y = newHeaderY;
-            self.header.frame = frame;
-            self.titleView.crossFade = (visibleHeight - newHeaderY) / (visibleHeight - hiddenHeight);
+        }
+    }
+    else if (self.headerStyle == SGHeaderStyleShrink) {
+        SGShrinkingSegmentedControlPanel *header = (SGShrinkingSegmentedControlPanel *)self.header;
+        CGFloat normalizedOffset = scrollView.contentOffset.y + scrollView.contentInset.top;
+        BOOL offsetInBounds = normalizedOffset > 0 && normalizedOffset < scrollView.contentSize.height - scrollView.bounds.size.height;
+        BOOL offsetNearTop = normalizedOffset < 44.0;
+        BOOL decelerating = scrollView.isDecelerating && !scrollView.isTracking;
+        BOOL dragging = scrollView.isTracking;
+        
+        if ((decelerating && normalizedOffset > 0) || (dragging && header.shrinkage < [header maxShrinkage]) || (offsetNearTop && offsetInBounds)) {
+            CGFloat scrollDelta = scrollView.contentOffset.y - self.lastTableContentOffset.y; // neg -> scrolling down
+            header.shrinkage += scrollDelta;
         }
     }
     
