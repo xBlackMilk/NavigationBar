@@ -28,14 +28,15 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [self setNeedsStatusBarAppearanceUpdate];
 	// Do any additional setup after loading the view.
 //  barFrame.size.height = 0.0;
-  _accessoryBar = [[UIToolbar alloc] init];
-  _accessoryBar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-  [self.view addSubview:_accessoryBar];
-  [self positionAccessoryBar];
-  [self tintAccessoryBar];
-  [self setupKVO];
+//  _accessoryBar = [[UIToolbar alloc] init];
+//  _accessoryBar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+//  [self.view addSubview:_accessoryBar];
+//  [self positionAccessoryBar];
+//  [self tintAccessoryBar];
+//  [self setupKVO];
 }
 
 - (void)setupKVO {
@@ -68,5 +69,8 @@
   self.accessoryBar.frame = barFrame;
 }
 
+- (UIStatusBarStyle)preferredStatusBarStyle {
+    return UIStatusBarStyleLightContent;
+}
 
 @end

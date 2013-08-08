@@ -5,6 +5,22 @@
 //  Created by Nick Lupinetti on 7/22/13.
 //  Copyright (c) 2013 Heavy Bits, Inc. All rights reserved.
 //
+// Blur Options:
+// - Don't blur (design tradeoff)
+// - Toolbar blur (design tradeoff)
+// - Accelerate on some devices (memory)
+// - GPU on all(?) devices (memory!)
+// - CoreImage on devices (not working?)
+// - Blur image on backend, truncate title
+// - Blur image on backend, download two images
+// -
+//
+//
+// Nav bar Options:
+// - Facebook-style hiding bar
+// - Safari-style shrkinking bar
+// - Reimplement Nav bar, should make translucency doable
+//
 
 #import "SGMasterViewController.h"
 
@@ -12,117 +28,35 @@
 #import "UIImage+ImageEffects.h"
 #import "SGViewTableViewController.h"
 #import "GPUImage.h"
-#import "SGBlurView.h"
-
-static NSString * const kHorizontalGaussianVertexShader = SHADER_STRING
-(
- attribute vec4 position;
- attribute vec4 inputTextureCoordinate;
- 
- varying vec2 vTexCoord;
- void main(void) {
-   gl_Position = position;
-   
-   // Clean up inaccuracies
-   vec2 Pos;
-   Pos = sign(gl_Vertex.xy);
-   
-   gl_Position = vec4(Pos, 0.0, 1.0);
-   // Image-space
-   vTexCoord = Pos * 0.5 + 0.5;
- }
- );
-
-static NSString * const kHorizontalGaussianFragmentShader = SHADER_STRING
-(
- uniform sampler2D inputImageTexture; // the texture with the scene you want to blur
- varying highp vec2 vTexCoord;
- 
- const highp float blurSize = 1.0/512.0; // I've chosen this size because this will result in that every step will be one pixel wide if the inputImageTexture texture is of size 512x512
- 
- void main(void)
-{
-  lowp vec4 sum = vec4(0.0);
-  
-  // blur in y (vertical)
-  // take nine samples, with the distance blurSize between them
-  sum += texture2D(inputImageTexture, vec2(vTexCoord.x - 4.0*blurSize, vTexCoord.y)) * 0.05;
-  sum += texture2D(inputImageTexture, vec2(vTexCoord.x - 3.0*blurSize, vTexCoord.y)) * 0.09;
-  sum += texture2D(inputImageTexture, vec2(vTexCoord.x - 2.0*blurSize, vTexCoord.y)) * 0.12;
-  sum += texture2D(inputImageTexture, vec2(vTexCoord.x - blurSize, vTexCoord.y)) * 0.15;
-  sum += texture2D(inputImageTexture, vec2(vTexCoord.x, vTexCoord.y)) * 0.16;
-  sum += texture2D(inputImageTexture, vec2(vTexCoord.x + blurSize, vTexCoord.y)) * 0.15;
-  sum += texture2D(inputImageTexture, vec2(vTexCoord.x + 2.0*blurSize, vTexCoord.y)) * 0.12;
-  sum += texture2D(inputImageTexture, vec2(vTexCoord.x + 3.0*blurSize, vTexCoord.y)) * 0.09;
-  sum += texture2D(inputImageTexture, vec2(vTexCoord.x + 4.0*blurSize, vTexCoord.y)) * 0.05;
-  
-  gl_FragColor = sum;
-}
- );
-
-static NSString * const kVerticalGaussianVertexShader = SHADER_STRING
-(
- varying vec2 vTexCoord;
- 
- // remember that you should draw a screen aligned quad
- void main(void)
-{
-  gl_Position = ftransform();;
-  
-  // Clean up inaccuracies
-  vec2 Pos;
-  Pos = sign(gl_Vertex.xy);
-  
-  gl_Position = vec4(Pos, 0.0, 1.0);
-  // Image-space
-  vTexCoord = Pos * 0.5 + 0.5;
-});
-static NSString * const kVerticalGaussianFragmentShader = SHADER_STRING
-(
- uniform sampler2D RTBlurH; // this should hold the texture rendered by the horizontal blur pass
- varying vec2 vTexCoord;
- 
- const float blurSize = 1.0/512.0;
- 
- void main(void)
-{
-  vec4 sum = vec4(0.0);
-  
-  // blur in y (vertical)
-  // take nine samples, with the distance blurSize between them
-  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y - 4.0*blurSize)) * 0.05;
-  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y - 3.0*blurSize)) * 0.09;
-  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y - 2.0*blurSize)) * 0.12;
-  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y - blurSize)) * 0.15;
-  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y)) * 0.16;
-  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y + blurSize)) * 0.15;
-  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y + 2.0*blurSize)) * 0.12;
-  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y + 3.0*blurSize)) * 0.09;
-  sum += texture2D(RTBlurH, vec2(vTexCoord.x, vTexCoord.y + 4.0*blurSize)) * 0.05;
-  
-  gl_FragColor = sum;
-}
- );
 
 typedef enum {
-  SGBlurMethodToolbar,
-  SGBlurMethodGPUImage,
-  SGBlurMethodAccelerate,
-  SGBlurMethodEvil,
-  SGBlurMethodCoreImage
+    SGBlurMethodToolbar,
+    SGBlurMethodGPUImage,
+    SGBlurMethodAccelerate,
+    SGBlurMethodCoreImage
 } SGBlurMethod;
 
-@interface SGImageBlurOperation : NSOperation {
-    BOOL _isExecuting;
-    BOOL _isFinished;
-}
+@interface SGImageBlurOperation : NSOperation
 @property (nonatomic, strong) UIImage *inputImage;
 @property (nonatomic, copy) void (^renderCompletion)(UIImage *);
 @property (nonatomic, readonly) BOOL isExecuting;
 @property (nonatomic, readonly) BOOL isFinished;
-@property (nonatomic) CGRect cropRect;
+@property (nonatomic) CGRect blurRegion;
+@property (nonatomic) SGBlurMethod blurMethod;
+@property (nonatomic) CGFloat blurRadius;
 @end
+
+static CIContext *kCoreImageContext = nil;
+
 @implementation SGImageBlurOperation
+
+- (id)init {
+    self = [super init];
+    if (self) {
+        self.blurRadius = 5.0;
+    }
+    return self;
+}
 
 - (void)start {
     if ([self isCancelled]) {
@@ -134,27 +68,78 @@ typedef enum {
     _isExecuting = YES;
     [self didChangeValueForKey:@"isExecuting"];
     
-    GPUImagePicture *gpuImage = [[GPUImagePicture alloc] initWithImage:self.inputImage];
+    UIImage *outputImage = nil;
     
-    GPUImageCropFilter *cropper = [[GPUImageCropFilter alloc] initWithCropRegion:self.cropRect];
-    
-    GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
-    blur.blurPasses = 2;
-    blur.blurSize = 1.5;
-    
-    [gpuImage addTarget:cropper];
-    [cropper addTarget:blur];
-    [gpuImage processImage];
-    
-    if ([self isCancelled]) {
-        [self prepareExit];
-        return;
+    if (self.blurMethod == SGBlurMethodAccelerate) {
+        outputImage = [self.inputImage applyBlurWithRadius:5 tintColor:[UIColor colorWithWhite:0.1 alpha:0.15] saturationDeltaFactor:1.4 maskImage:nil];
     }
-    
-//    UIImage *outputImage = [blur imageByFilteringImage:self.inputImage];
-    CGImageRef cgImage = [blur newCGImageFromCurrentlyProcessedOutput];
-    UIImage *outputImage = [UIImage imageWithCGImage:cgImage scale:self.inputImage.scale orientation:self.inputImage.imageOrientation];
-    CGImageRelease(cgImage);
+    else if (self.blurMethod == SGBlurMethodCoreImage) {
+        if (!kCoreImageContext) {
+            EAGLContext *glContext = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
+            kCoreImageContext = [CIContext contextWithEAGLContext:glContext options:@{kCIContextWorkingColorSpace: [NSNull null]}];
+        }
+        
+        CGFloat scale = self.inputImage.scale;
+        // Core Image coordinate (0, 0) is the bottom left of the image instead of top left
+        CGRect cropRect = self.blurRegion;
+        cropRect.origin.y = (self.inputImage.size.height - cropRect.origin.y - cropRect.size.height) * scale;
+        cropRect.origin.x *= scale;
+        cropRect.size.width *= scale;
+        cropRect.size.height *= scale;
+        
+        CIImage *original = [CIImage imageWithCGImage:self.inputImage.CGImage];
+        
+        CIFilter *edgeClamp = [CIFilter filterWithName:@"CIAffineClamp"];
+        [edgeClamp setValue:original forKey:kCIInputImageKey];
+        CIImage *clampOutput = [edgeClamp valueForKey:kCIOutputImageKey];
+        
+        CIFilter *blurFilter = [CIFilter filterWithName:@"CIGaussianBlur"];
+        [blurFilter setValue:clampOutput forKey:kCIInputImageKey];
+        [blurFilter setValue:@(self.blurRadius) forKey:kCIInputRadiusKey];
+        CIImage *blurOutput = [blurFilter valueForKey:kCIOutputImageKey];
+      
+      CIFilter *darkenFilter = [CIFilter filterWithName:@"CIExposureAdjust"];
+      [darkenFilter setValue:blurOutput forKey:kCIInputImageKey];
+      [darkenFilter setValue:@-.3 forKey:kCIInputEVKey];
+      CIImage *darkenOutput = [darkenFilter valueForKey:kCIOutputImageKey];
+        
+        CIFilter *cropFilter = [CIFilter filterWithName:@"CICrop"];
+        [cropFilter setValue:darkenOutput forKey:kCIInputImageKey];
+        [cropFilter setValue:[CIVector vectorWithCGRect:cropRect] forKey:@"inputRectangle"];
+        CIImage *cropOutput = [cropFilter valueForKey:kCIOutputImageKey];
+        
+        CIFilter *compositor = [CIFilter filterWithName:@"CISourceOverCompositing"];
+        [compositor setValue:cropOutput forKey:kCIInputImageKey];
+        [compositor setValue:original forKey:kCIInputBackgroundImageKey];
+        CIImage *composite = [compositor valueForKey:kCIOutputImageKey];
+      
+        
+        CGImageRef cgImage = [kCoreImageContext createCGImage:composite fromRect:[original extent]];
+        
+        outputImage = [UIImage imageWithCGImage:cgImage scale:self.inputImage.scale orientation:self.inputImage.imageOrientation];
+        CGImageRelease(cgImage);
+    }
+    else {
+        GPUImagePicture *gpuImage = [[GPUImagePicture alloc] initWithImage:self.inputImage];
+        // broken
+        GPUImageCropFilter *cropper = [[GPUImageCropFilter alloc] initWithCropRegion:self.blurRegion];
+        GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
+        blur.blurPasses = 2;
+        blur.blurSize = 1.5;
+        
+        [gpuImage addTarget:cropper];
+        [cropper addTarget:blur];
+        [gpuImage processImage];
+        
+        if ([self isCancelled]) {
+            [self prepareExit];
+            return;
+        }
+        
+        CGImageRef cgImage = [blur newCGImageFromCurrentlyProcessedOutput];
+        outputImage = [UIImage imageWithCGImage:cgImage scale:self.inputImage.scale orientation:self.inputImage.imageOrientation];
+        CGImageRelease(cgImage);
+    }
     
     if ([self isCancelled]) {
         [self prepareExit];
@@ -180,7 +165,7 @@ static NSOperationQueue *kBlurringOperationQueue;
 
 @interface SGTableViewCell : UITableViewCell
 @property (nonatomic, readonly) UIImageView *photoView;
-@property (nonatomic, readonly) UIImageView *blurPanel;
+@property (nonatomic, strong) UIImage *image;
 @property (nonatomic, readonly) UIImage *blurredImage;
 @property (nonatomic, readonly) GPUImageView *gpuImageView;
 @property (nonatomic, readonly) GPUImageFilter *gpuFilter;
@@ -191,133 +176,102 @@ static NSOperationQueue *kBlurringOperationQueue;
 
 @implementation SGTableViewCell
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
-  if (self = [super initWithStyle:style reuseIdentifier:reuseIdentifier]) {
-    _photoView = [[UIImageView alloc] initWithFrame:self.bounds];
-    _photoView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
-    _photoView.contentMode = UIViewContentModeBottom;
-    [self.contentView addSubview:_photoView];
-    
-    [_photoView addObserver:self forKeyPath:@"image" options:NSKeyValueObservingOptionNew context:NULL];
-    
-    self.blurMethod = SGBlurMethodGPUImage;
-    
-    CGRect blurFrame = self.bounds;
-    blurFrame.size.height /= 4;
-    blurFrame.origin.y = self.bounds.size.height - blurFrame.size.height;
-    UIViewAutoresizing blurAutoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-      
-    if (self.blurMethod == SGBlurMethodToolbar) {
-      UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame:blurFrame];
-      toolbar.autoresizingMask = blurAutoresizingMask;
-      toolbar.barTintColor = [UIColor colorWithWhite:1.0 alpha:.0];
-      [self.contentView addSubview:toolbar];
-    }
-    else if (self.blurMethod == SGBlurMethodEvil) {
-      SGBlurView *blurView = [[SGBlurView alloc] initWithFrame:blurFrame];
-      blurView.autoresizingMask = blurAutoresizingMask;
-      [self.contentView addSubview:blurView];
-    }
-    else {
-      _blurPanel = [[UIImageView alloc] initWithFrame:blurFrame];
-      _blurPanel.contentMode = UIViewContentModeBottom;
-      _blurPanel.autoresizingMask = blurAutoresizingMask;
-      _blurPanel.clipsToBounds = YES;
-      [self.contentView addSubview:_blurPanel];
+    if (self = [super initWithStyle:style reuseIdentifier:reuseIdentifier]) {
+        _photoView = [[UIImageView alloc] initWithFrame:self.bounds];
+        _photoView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+        _photoView.contentMode = UIViewContentModeBottom;
+        [self.contentView addSubview:_photoView];
         
-        kBlurringOperationQueue = [[NSOperationQueue alloc] init];
-        kBlurringOperationQueue.maxConcurrentOperationCount = 1;
-    }
-    
-    if (self.blurMethod == SGBlurMethodGPUImage) {
-      GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
-      blur.blurPasses = 2;
-      blur.blurSize = 1.5;
-      _gpuFilter = blur;
+        //        [_photoView addObserver:self forKeyPath:@"image" options:NSKeyValueObservingOptionNew context:NULL];
         
-        UIView *overlay = [[UIView alloc] initWithFrame:blurFrame];
-        overlay.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.15];
-        overlay.autoresizingMask = blurAutoresizingMask;
-        [self.contentView addSubview:overlay];
+        self.blurMethod = SGBlurMethodCoreImage;
+        
+        CGRect blurFrame = self.bounds;
+        blurFrame.size.height /= 4;
+        blurFrame.origin.y = self.bounds.size.height - blurFrame.size.height;
+        UIViewAutoresizing blurAutoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        
+        if (self.blurMethod == SGBlurMethodToolbar) {
+            UINavigationBar *toolbar = [[UINavigationBar alloc] initWithFrame:blurFrame];
+            toolbar.autoresizingMask = blurAutoresizingMask;
+            toolbar.barTintColor = [UIColor colorWithWhite:0.9 alpha:1.0];
+            [self.contentView addSubview:toolbar];
+        }
+        else {
+            //            _blurPanel = [[UIImageView alloc] initWithFrame:blurFrame];
+            //            _blurPanel.contentMode = UIViewContentModeBottom;
+            //            _blurPanel.autoresizingMask = blurAutoresizingMask;
+            //            _blurPanel.clipsToBounds = YES;
+            //            [self.contentView addSubview:_blurPanel];
+            
+            kBlurringOperationQueue = [[NSOperationQueue alloc] init];
+            kBlurringOperationQueue.maxConcurrentOperationCount = 1;
+            [kBlurringOperationQueue setName:@"com.snapguide.blur"];
+        }
+        
+        if (self.blurMethod == SGBlurMethodGPUImage) {
+            GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
+            blur.blurPasses = 2;
+            blur.blurSize = 1.5;
+            _gpuFilter = blur;
+            
+            UIView *overlay = [[UIView alloc] initWithFrame:blurFrame];
+            overlay.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.15];
+            overlay.autoresizingMask = blurAutoresizingMask;
+            [self.contentView addSubview:overlay];
+        }
     }
-  }
-  return self;
+    return self;
 }
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-  [self blurImage:change[NSKeyValueChangeNewKey]];
+- (void)setImage:(UIImage *)image {
+    if (image == _image) return;
+    self.photoView.image = nil;
+    [self blurImage:image];
+    
 }
+
+//- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+//    [self blurImage:change[NSKeyValueChangeNewKey]];
+//}
 
 - (void)blurImage:(UIImage *)image {
-  UIImage *blurImage = image;
-  switch (self.blurMethod) {
-    case SGBlurMethodAccelerate:
-      blurImage = [self blurImageAccelerate:image];
-      break;
-    case SGBlurMethodGPUImage:
-      blurImage = [self blurImageGPU:image];
-      break;
-    case SGBlurMethodCoreImage:
-      blurImage = [self blurImageGPU:image];
-      break;
-    case SGBlurMethodToolbar:
-    case SGBlurMethodEvil:
-      blurImage = nil;
-      break;
-  }
-  self.blurPanel.image = blurImage;
+    switch (self.blurMethod) {
+        case SGBlurMethodAccelerate:
+        case SGBlurMethodCoreImage:
+        case SGBlurMethodGPUImage:
+            [self blurImageInBackground:image];
+            break;
+        case SGBlurMethodToolbar:
+            break;
+    }
 }
 
 - (UIImage *)blurImageAccelerate:(UIImage *)image {
-  return [image applyBlurWithRadius:5 tintColor:[UIColor colorWithWhite:0.1 alpha:0.15] saturationDeltaFactor:1.4 maskImage:nil];
+    return [image applyBlurWithRadius:5 tintColor:[UIColor colorWithWhite:0.1 alpha:0.15] saturationDeltaFactor:1.4 maskImage:nil];
 }
 
-- (UIImage *)blurImageGPU:(UIImage *)image {
-//  CGFloat blurRadius = 6.0;
-//  CGFloat inputRadius = blurRadius * [[UIScreen mainScreen] scale];
-//  NSUInteger radius = floor(inputRadius * 3. * sqrt(2 * M_PI) / 4 + 0.5);
-//  if (radius % 2 != 1) {
-//    radius += 1; // force radius to be odd so that the three box-blur methodology works.
-//  }
-//  radius = 1;
-//  
-//  GPUImagePicture *gpuImage = [[GPUImagePicture alloc] initWithImage:image];
-//  GPUImageBoxBlurFilter *filter1 = [[GPUImageBoxBlurFilter alloc] init];
-//  GPUImageBoxBlurFilter *filter2 = [[GPUImageBoxBlurFilter alloc] init];
-//  GPUImageBoxBlurFilter *filter3 = [[GPUImageBoxBlurFilter alloc] init];
-//  GPUImageBrightnessFilter *filter4 = [[GPUImageBrightnessFilter alloc] init];
-//  filter4.brightness = 0.1;
-//  filter1.blurSize = radius;
-//  filter2.blurSize = radius;
-//  filter3.blurSize = radius;
-//  [gpuImage addTarget:filter1];
-//  [filter1 addTarget:filter2];
-//  [filter2 addTarget:filter3];
-//  [filter3 addTarget:filter4];
-  
-//  [gpuImage processImage];
-//  CGImageRef cgImage = [filter4 newCGImageFromCurrentlyProcessedOutput];
-//  UIImage *blurImage = [UIImage imageWithCGImage:cgImage scale:[image scale] orientation:[image imageOrientation]];
-//  return blurImage;
-    
+- (UIImage *)blurImageInBackground:(UIImage *)image {
     [self.blurOperation cancel];
     
     __weak SGTableViewCell *weakSelf = self;
     self.blurOperation = [[SGImageBlurOperation alloc] init];
+    self.blurOperation.blurMethod = self.blurMethod;
     self.blurOperation.inputImage = image;
-    self.blurOperation.cropRect = CGRectMake(0, 0.75, 1, .25);
+    self.blurOperation.blurRegion = CGRectMake(0, image.size.height * 0.75, image.size.width, image.size.height * 0.25);
     self.blurOperation.renderCompletion = ^(UIImage *outputImage) {
         [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-            weakSelf.blurPanel.image = outputImage;
+            weakSelf.photoView.image = outputImage;
         }];
     };
     [kBlurringOperationQueue addOperation:self.blurOperation];
     return nil;
-  return [self.gpuFilter imageByFilteringImage:image];
-  return image;
+    return [self.gpuFilter imageByFilteringImage:image];
+    return image;
 }
 
 - (UIImage *)blurImageCoreImage:(UIImage *)image {
-  return image;
+    return image;
 }
 
 @end
@@ -331,34 +285,42 @@ static NSOperationQueue *kBlurringOperationQueue;
 
 @implementation SGCrossfadingLabelView
 - (id)initWithFrame:(CGRect)frame {
-  self = [super initWithFrame:frame];
-  if (self) {
-    _titleLabel = [[UILabel alloc] initWithFrame:frame];
-    _detailLabel = [[UILabel alloc] initWithFrame:frame];
-    UIViewAutoresizing autoresize = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    _titleLabel.autoresizingMask = autoresize;
-    _detailLabel.autoresizingMask = autoresize;
-      _titleLabel.textAlignment = NSTextAlignmentCenter;
-      _detailLabel.textAlignment = NSTextAlignmentCenter;
-    [self addSubview:_titleLabel];
-    [self addSubview:_detailLabel];
-      [self updateAlphas];
-  }
-  return self;
+    self = [super initWithFrame:frame];
+    if (self) {
+        _titleLabel = [[UILabel alloc] initWithFrame:frame];
+        _detailLabel = [[UILabel alloc] initWithFrame:frame];
+        UIViewAutoresizing autoresize = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        _titleLabel.autoresizingMask = autoresize;
+        _detailLabel.autoresizingMask = autoresize;
+        _titleLabel.textAlignment = NSTextAlignmentCenter;
+        _detailLabel.textAlignment = NSTextAlignmentCenter;
+        [self addSubview:_titleLabel];
+        [self addSubview:_detailLabel];
+        [self updateAlphas];
+    }
+    return self;
 }
 
 - (CGSize)sizeThatFits:(CGSize)size {
-  CGSize titleSize = [self.titleLabel sizeThatFits:size];
-  CGSize detailSize = [self.detailLabel sizeThatFits:size];
-  CGFloat maxWidth = fmaxf(titleSize.width, detailSize.width);
-  CGFloat maxHeight = fmaxf(titleSize.height, detailSize.height);
-  return CGSizeMake(maxWidth, maxHeight);
+    CGSize titleSize = [self.titleLabel sizeThatFits:size];
+    CGSize detailSize = [self.detailLabel sizeThatFits:size];
+    CGFloat maxWidth = fmaxf(titleSize.width, detailSize.width);
+    CGFloat maxHeight = fmaxf(titleSize.height, detailSize.height);
+    return CGSizeMake(maxWidth, maxHeight);
+}
+
+- (void)setCrossFade:(CGFloat)crossFade animated:(BOOL)animated {
+    NSTimeInterval duration = animated ? 0.3 : 0.0;
+    [UIView animateWithDuration:duration animations:^{
+        self.crossFade = crossFade;
+    }];
 }
 
 - (void)setCrossFade:(CGFloat)crossFade {
     crossFade = fminf(1.0, fmaxf(0.0, crossFade));
     if (crossFade == _crossFade) return;
     _crossFade = crossFade;
+    
     [self updateAlphas];
 }
 
@@ -371,13 +333,13 @@ static NSOperationQueue *kBlurringOperationQueue;
 
 @interface SGShrinkingSegmentedControlPanel : UIView
 @property (nonatomic, readonly) UISegmentedControl *segmentedControl;
-@property (nonatomic, readonly) UILabel *shrinkLabel;
+@property (nonatomic, readonly) CGFloat maxShrinkage;
 @property (nonatomic) CGFloat shrinkage;
+- (void)setShrinkage:(CGFloat)shrinkage animated:(BOOL)animated;
 @end
 
 @interface SGShrinkingSegmentedControlPanel ()
 @property (nonatomic, getter = isAdjustingShrinkage) BOOL adjustingShrinkage;
-@property (nonatomic, readonly) CGFloat maxShrinkage;
 @property (nonatomic) CGRect fullFrame;
 @end
 
@@ -387,15 +349,22 @@ static NSOperationQueue *kBlurringOperationQueue;
     self = [super initWithFrame:frame];
     if (self) {
         _segmentedControl = [[UISegmentedControl alloc] initWithItems:@[]];
-        _segmentedControl.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin;
-        _shrinkLabel = [[UILabel alloc] init];
-        _shrinkLabel.textAlignment = NSTextAlignmentCenter;
+        //        _segmentedControl.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin;
         [self addSubview:self.segmentedControl];
-        [self addSubview:self.shrinkLabel];
         [self updateSegmentedControlFrame];
         self.clipsToBounds = YES;
     }
     return self;
+}
+
+- (void)setShrinkage:(CGFloat)shrinkage animated:(BOOL)animated {
+    self.adjustingShrinkage = YES;
+    NSTimeInterval duration = animated ? 0.3 : 0.0;
+    [UIView animateWithDuration:duration delay:0.0 usingSpringWithDamping:1 initialSpringVelocity:0.0 options:0 animations:^{
+        self.shrinkage = shrinkage;
+    } completion:^(BOOL finished) {
+        self.adjustingShrinkage = NO;
+    }];
 }
 
 - (void)setFrame:(CGRect)frame {
@@ -417,7 +386,11 @@ static NSOperationQueue *kBlurringOperationQueue;
 }
 
 - (CGFloat)maxShrinkage {
-    return floor(self.fullFrame.size.height / 2.0);
+    return self.fullFrame.size.height;
+}
+
+- (CGFloat)maxShrinkFactor {
+    return 0.5;
 }
 
 - (void)setShrinkage:(CGFloat)shrinkage {
@@ -425,6 +398,7 @@ static NSOperationQueue *kBlurringOperationQueue;
     if (shrinkage == _shrinkage) return;
     _shrinkage = shrinkage;
     [self updateShrinkage];
+    self.segmentedControl.userInteractionEnabled = shrinkage == 0;
 }
 
 - (void)updateShrinkage {
@@ -435,18 +409,11 @@ static NSOperationQueue *kBlurringOperationQueue;
     self.frame = frame;
     
     CGFloat alpha = self.shrinkage / [self maxShrinkage];
-    self.shrinkLabel.alpha = alpha;
     self.segmentedControl.alpha = 1 - alpha;
     
-    self.shrinkLabel.text = [self.segmentedControl titleForSegmentAtIndex:self.segmentedControl.selectedSegmentIndex];
-    frame = self.segmentedControl.frame;
-    frame.size.width /= self.segmentedControl.numberOfSegments;
-    frame.origin.x += frame.size.width * self.segmentedControl.selectedSegmentIndex;
-    self.shrinkLabel.frame = frame;
-    
-//    CGFloat shrinkFactor = frame.size.height / self.fullFrame.size.height;
-//    self.segmentedControl.transform = CGAffineTransformMakeScale(shrinkFactor, shrinkFactor);
-//    self.segmentedControl.center = [self convertPoint:self.center fromView:[self superview]];
+    CGFloat shrinkFactor = 1 - (self.shrinkage / [self maxShrinkage] * (1 - [self maxShrinkFactor]));
+    self.segmentedControl.transform = CGAffineTransformMakeScale(shrinkFactor, shrinkFactor);
+    self.segmentedControl.center = CGPointMake(self.bounds.size.width / 2.0, self.bounds.size.height / 2.0);
     
     self.adjustingShrinkage = NO;
 }
@@ -474,146 +441,151 @@ typedef enum : NSInteger {
 @implementation SGMasterViewController
 
 - (void)viewWillAppear:(BOOL)animated {
-  [super viewWillAppear:animated];
-  
-  if (animated && self.manageBarHeight) {
-    UINavigationBar *bar = self.navigationController.navigationBar;
-    CGRect frame = bar.frame;
-    frame.size.height += 44.0;
+    [super viewWillAppear:animated];
     
-    [[self transitionCoordinator] animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
-      bar.frame = frame;
-      self.tableView.contentInset = UIEdgeInsetsMake(104, 0, 0, 0);
-    } completion:nil];
-  }
+    if (animated && self.manageBarHeight) {
+        UINavigationBar *bar = self.navigationController.navigationBar;
+        CGRect frame = bar.frame;
+        frame.size.height += 44.0;
+        
+        [[self transitionCoordinator] animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+            bar.frame = frame;
+            self.tableView.contentInset = UIEdgeInsetsMake(104, 0, 0, 0);
+        } completion:nil];
+    }
 }
 
 - (void)viewDidAppear:(BOOL)animated {
-  [super viewDidAppear:animated];
-  
-  if (!self.hasAppeared && self.manageBarHeight) {
-    self.hasAppeared = YES;
-    UINavigationBar *bar = self.navigationController.navigationBar;
-    CGRect frame = bar.frame;
-    frame.size.height += 44;
-    bar.frame = frame;
+    [super viewDidAppear:animated];
     
-    NSArray *buttons = [self buttonsInNavBar:bar];
-    for (UIView *button in buttons) {
-      CGRect frame = button.frame;
-      frame.origin.y -= 44;
-      button.frame = frame;
+    if (!self.hasAppeared && self.manageBarHeight) {
+        self.hasAppeared = YES;
+        UINavigationBar *bar = self.navigationController.navigationBar;
+        CGRect frame = bar.frame;
+        frame.size.height += 44;
+        bar.frame = frame;
+        
+        NSArray *buttons = [self buttonsInNavBar:bar];
+        for (UIView *button in buttons) {
+            CGRect frame = button.frame;
+            frame.origin.y -= 44;
+            button.frame = frame;
+        }
     }
-  }
-  else if (!self.hasAppeared) {
-    self.hasAppeared = YES;
-    [SGBlurView prepareBlurViewsWithNavigationBar:self.navigationController.navigationBar];
-  }
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
-  [super viewWillDisappear:animated];
-  
-  if (self.manageBarHeight && animated) {
-    UINavigationBar *bar = self.navigationController.navigationBar;
-    CGRect frame = bar.frame;
-    frame.size.height -= 44.0;
+    [super viewWillDisappear:animated];
     
-    [[self transitionCoordinator] animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
-      bar.frame = frame;
-      self.tableView.contentInset = UIEdgeInsetsMake(44, 0, 0, 0);
-    } completion:nil];
-  }
+    if (self.manageBarHeight && animated) {
+        UINavigationBar *bar = self.navigationController.navigationBar;
+        CGRect frame = bar.frame;
+        frame.size.height -= 44.0;
+        
+        [[self transitionCoordinator] animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+            bar.frame = frame;
+            self.tableView.contentInset = UIEdgeInsetsMake(44, 0, 0, 0);
+        } completion:nil];
+    }
 }
 
 - (void)viewDidLoad {
-  [super viewDidLoad];
-  
-  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(insertNewObject:)];
-  self.titleView = [[SGCrossfadingLabelView alloc] init];
-  self.titleView.titleLabel.text = @"Explore";
-  self.titleView.detailLabel.text = @"Popular";
-    self.titleView.titleLabel.textColor = self.titleView.detailLabel.textColor = [UIColor whiteColor];
+    [super viewDidLoad];
     
-  [self.titleView sizeToFit];
-  self.navigationItem.titleView = self.titleView;
-  
-  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Views" style:UIBarButtonItemStylePlain target:self action:@selector(toggleViewTable)];
-  
-  self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
-  self.tableView.delegate = self;
-  self.tableView.dataSource = self;
-  self.tableView.rowHeight = 320.0;
-  self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-  [self.tableView registerClass:[SGTableViewCell class] forCellReuseIdentifier:@"Cell"];
-  [self.view addSubview:self.tableView];
-  
-  if (0) { // Capture, blur, and display manually
-    self.header = [[UIImageView alloc] init];
-  }
-  else if (1) { // Toolbar
-      self.headerStyle = SGHeaderStyleShrink;
-      
-      if (self.headerStyle == SGHeaderStyleHide) {
-          UINavigationBar *header = [[UINavigationBar alloc] init];
-//          [header setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
-          [header setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarMetrics:UIBarMetricsDefault]; // iOS 6 friendly
-//          [header setShadowImage:[UIImage imageNamed:@"clearpix"]];
-          UISegmentedControl *segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Topics",@"Popular",@"Recent"]];
-          segmentedControl.backgroundColor = [UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
-          segmentedControl.tintColor = [UIColor colorWithWhite:1 alpha:1];//[UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
-          segmentedControl.selectedSegmentIndex = 1;
-          [segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
-          CGRect frame = segmentedControl.frame;
-          frame.size.width = self.view.bounds.size.width - 20.0;
-          segmentedControl.frame = frame;
-          header.items = @[[[UINavigationItem alloc] init]];
-          [header.items[0] setTitleView:segmentedControl];
-          [header addSubview:segmentedControl];
-          self.header = header;
-      }
-      else if (self.headerStyle == SGHeaderStyleShrink) {
-          SGShrinkingSegmentedControlPanel *header = [[SGShrinkingSegmentedControlPanel alloc] init];
-          header.backgroundColor = [UIColor colorWithRed:250.0/255.0 green:100.0/255.0 blue:14.0/255.0 alpha:1.0];
-          [header.segmentedControl insertSegmentWithTitle:@"Topics" atIndex:0 animated:NO];
-          [header.segmentedControl insertSegmentWithTitle:@"Popular" atIndex:1 animated:NO];
-          [header.segmentedControl insertSegmentWithTitle:@"Recent" atIndex:2 animated:NO];
-          header.segmentedControl.backgroundColor =[UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
-          header.segmentedControl.selectedSegmentIndex = 1;
-          [header.segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
-          header.tintColor = [UIColor whiteColor];
-          header.shrinkLabel.textColor = [UIColor whiteColor];
-          header.shrinkLabel.font = [UIFont systemFontOfSize:13];
-          
-          self.header = header;
-      }
-  }
-  else if (0) { // Use personal nav bar
-    [self.navigationController setNavigationBarHidden:YES animated:NO];
-    UINavigationBar *bar = [[UINavigationBar alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 104)];
-    bar.barTintColor = [UIColor orangeColor];
-    bar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [bar pushNavigationItem:self.navigationItem animated:NO];
-    [self.view addSubview:bar];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(insertNewObject:)];
+    self.navigationItem.title = @"Explore";
     
-    self.tableView.contentInset = UIEdgeInsetsMake(104, 0, 0, 0);
-  }
-  else if (0) { // Resize nav controller's nav bar
-    self.manageBarHeight = YES;
-  }
-  
-  self.header.frame = CGRectMake(0, 64, self.view.bounds.size.width, 44);
-  self.header.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
-  [self.view addSubview:self.header];
-  
-  if (self.header) {
-    self.tableView.contentInset = UIEdgeInsetsMake(self.header.frame.size.height, 0, 0, 0);
-  }
-  self.tableView.scrollIndicatorInsets = self.tableView.contentInset;
-  
-//  self.navigationController.delegate = self;
-  
-  srand(time(NULL));
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Views" style:UIBarButtonItemStylePlain target:self action:@selector(toggleViewTable)];
+    
+    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
+    self.tableView.delegate = self;
+    self.tableView.dataSource = self;
+    self.tableView.rowHeight = 320.0;
+    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.tableView registerClass:[SGTableViewCell class] forCellReuseIdentifier:@"Cell"];
+    [self.view addSubview:self.tableView];
+    
+    [self loadImages];
+    
+    if (0) { // Capture, blur, and display manually
+        self.header = [[UIImageView alloc] init];
+    }
+    else if (1) { // Toolbar
+        self.headerStyle = SGHeaderStyleShrink;
+        
+        if (self.headerStyle == SGHeaderStyleHide) {
+            self.titleView = [[SGCrossfadingLabelView alloc] init];
+            self.titleView.titleLabel.text = @"Explore";
+            self.titleView.detailLabel.text = @"Popular";
+            self.titleView.titleLabel.textColor = self.titleView.detailLabel.textColor = [UIColor whiteColor];
+            [self.titleView sizeToFit];
+            self.navigationItem.titleView = self.titleView;
+            
+            UINavigationBar *header = [[UINavigationBar alloc] init];
+            //          [header setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
+            [header setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarMetrics:UIBarMetricsDefault]; // iOS 6 friendly
+                                                                                                             //          [header setShadowImage:[UIImage imageNamed:@"clearpix"]];
+            UISegmentedControl *segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Topics",@"Popular",@"Recent"]];
+            segmentedControl.backgroundColor = [UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
+            segmentedControl.tintColor = [UIColor colorWithWhite:1 alpha:1];//[UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
+            segmentedControl.selectedSegmentIndex = 1;
+            [segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
+            CGRect frame = segmentedControl.frame;
+            frame.size.width = self.view.bounds.size.width - 20.0;
+            segmentedControl.frame = frame;
+            header.items = @[[[UINavigationItem alloc] init]];
+            [header.items[0] setTitleView:segmentedControl];
+            [header addSubview:segmentedControl];
+            self.header = header;
+        }
+        else if (self.headerStyle == SGHeaderStyleShrink) {
+            SGShrinkingSegmentedControlPanel *header = [[SGShrinkingSegmentedControlPanel alloc] init];
+            header.backgroundColor = [UIColor colorWithRed:250.0/255.0 green:100.0/255.0 blue:14.0/255.0 alpha:1.0];
+            [header.segmentedControl insertSegmentWithTitle:@"Topics" atIndex:0 animated:NO];
+            [header.segmentedControl insertSegmentWithTitle:@"Popular" atIndex:1 animated:NO];
+            [header.segmentedControl insertSegmentWithTitle:@"Recent" atIndex:2 animated:NO];
+            header.segmentedControl.backgroundColor = [UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
+            header.segmentedControl.selectedSegmentIndex = 1;
+            [header.segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
+            header.tintColor = [UIColor whiteColor];
+            self.header = header;
+            
+            self.titleView = [[SGCrossfadingLabelView alloc] init];
+            self.titleView.titleLabel.text = self.navigationItem.title;
+            self.titleView.detailLabel.text = [header.segmentedControl titleForSegmentAtIndex:header.segmentedControl.selectedSegmentIndex];
+            self.titleView.titleLabel.textColor = self.titleView.detailLabel.textColor = [UIColor whiteColor];
+            [self.titleView sizeToFit];
+            self.navigationItem.titleView = self.titleView;
+            
+            [self.titleView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(showHeader)]];
+        }
+    }
+    else if (0) { // Use personal nav bar
+        [self.navigationController setNavigationBarHidden:YES animated:NO];
+        UINavigationBar *bar = [[UINavigationBar alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 104)];
+        bar.barTintColor = [UIColor orangeColor];
+        bar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        [bar pushNavigationItem:self.navigationItem animated:NO];
+        [self.view addSubview:bar];
+        
+        self.tableView.contentInset = UIEdgeInsetsMake(104, 0, 0, 0);
+    }
+    else if (0) { // Resize nav controller's nav bar
+        self.manageBarHeight = YES;
+    }
+    
+    self.header.frame = CGRectMake(0, 64, self.view.bounds.size.width, 44);
+    self.header.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+    [self.view addSubview:self.header];
+    
+    if (self.header) {
+        self.tableView.contentInset = UIEdgeInsetsMake(self.header.frame.size.height, 0, 0, 0);
+    }
+    self.tableView.scrollIndicatorInsets = self.tableView.contentInset;
+    
+    //  self.navigationController.delegate = self;
+    
+    srand(time(NULL));
 }
 
 - (void)segmentSelected:(UISegmentedControl *)sender {
@@ -623,67 +595,82 @@ typedef enum : NSInteger {
 }
 
 - (NSArray *)buttonsInNavBar:(UINavigationBar *)bar {
-  NSMutableArray *buttons = [NSMutableArray array];
-  for (UIView *subview in [bar subviews]) {
-    if ([subview isKindOfClass:NSClassFromString(@"UINavigationButton")]) {
-      [buttons addObject:subview];
+    NSMutableArray *buttons = [NSMutableArray array];
+    for (UIView *subview in [bar subviews]) {
+        if ([subview isKindOfClass:NSClassFromString(@"UINavigationButton")]) {
+            [buttons addObject:subview];
+        }
     }
-  }
-  return buttons;
+    return buttons;
+}
+
+- (NSInteger)assetCount {
+    return 16;
+}
+
+- (UIImage *)assetWithIndex:(NSInteger)index {
+    NSString *assetName = [NSString stringWithFormat:@"%02d", index];
+    return [UIImage imageNamed:assetName];
+}
+
+- (void)loadImages {
+    _objects = [[NSMutableArray alloc] init];
+    
+    for (int i = 0; i < 30; i++) {
+        NSInteger assetIndex = fmodf(i, [self assetCount]) + 1;
+        [self.objects addObject:[self assetWithIndex:assetIndex]];
+    }
 }
 
 - (void)insertNewObject:(id)sender {
-  if (!_objects) {
-    _objects = [[NSMutableArray alloc] init];
-  }
-  
-  NSInteger assetCount = 16;
-  NSInteger index = [self.objects count];
-  NSInteger assetIndex = rand()%assetCount + 1;
-  NSString *assetName = [NSString stringWithFormat:@"%02d", assetIndex];
-  [self.objects addObject:[UIImage imageNamed:assetName]];
-  NSIndexPath *indexPath = [NSIndexPath indexPathForRow:index inSection:0];
-  [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+    if (!_objects) {
+        _objects = [[NSMutableArray alloc] init];
+    }
+    
+    NSInteger assetIndex = rand() % [self assetCount] + 1;
+    [self.objects addObject:[self assetWithIndex:assetIndex]];
+    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:[self.objects count] - 1 inSection:0];
+    [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
 }
 
 - (void)toggleViewTable {
-  self.navigationItem.leftBarButtonItem.enabled = NO;
-  
-  if (!self.viewTable) {
-    self.viewTable = [[SGViewTableViewController alloc] init];
-    self.viewTable.rootView = self.navigationController.view;
+    self.navigationItem.leftBarButtonItem.enabled = NO;
     
-    [self.viewTable willMoveToParentViewController:self];
-    [self addChildViewController:self.viewTable];
-    [self.view addSubview:self.viewTable.view];
-    CGRect frame = CGRectInset(self.view.bounds, 40.0, 100);
-    frame.origin.y = self.view.bounds.size.height;
-    self.viewTable.view.frame = frame;
-    CGFloat extraMargin = 50.0;
-    frame.origin.y -= frame.size.height - extraMargin;
-    self.viewTable.tableView.contentInset = UIEdgeInsetsMake(0, 0, extraMargin, 0);
-    self.viewTable.tableView.scrollIndicatorInsets = self.viewTable.tableView.contentInset;
-    
-    [UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:0 animations:^{
-      self.viewTable.view.frame = frame;
-    } completion:^(BOOL finished) {
-      [self.viewTable didMoveToParentViewController:self];
-      self.navigationItem.leftBarButtonItem.enabled = YES;
-    }];
-  }
-  else {
-    [self.viewTable willMoveToParentViewController:nil];
-    CGRect frame = self.viewTable.view.frame;
-    frame.origin.y += frame.size.height;
-    [UIView animateWithDuration:0.2 delay:0.0 usingSpringWithDamping:1.5 initialSpringVelocity:-20 options:0 animations:^{
-      self.viewTable.view.frame = frame;
-    } completion:^(BOOL finished) {
-      [self.viewTable removeFromParentViewController];
-      [self.viewTable.view removeFromSuperview];
-      self.viewTable = nil;
-      self.navigationItem.leftBarButtonItem.enabled = YES;
-    }];
-  }
+    if (!self.viewTable) {
+        self.viewTable = [[SGViewTableViewController alloc] init];
+        self.viewTable.rootView = self.navigationController.view;
+        
+        [self.viewTable willMoveToParentViewController:self];
+        [self addChildViewController:self.viewTable];
+        [self.view addSubview:self.viewTable.view];
+        CGRect frame = CGRectInset(self.view.bounds, 40.0, 100);
+        frame.origin.y = self.view.bounds.size.height;
+        self.viewTable.view.frame = frame;
+        CGFloat extraMargin = 50.0;
+        frame.origin.y -= frame.size.height - extraMargin;
+        self.viewTable.tableView.contentInset = UIEdgeInsetsMake(0, 0, extraMargin, 0);
+        self.viewTable.tableView.scrollIndicatorInsets = self.viewTable.tableView.contentInset;
+        
+        [UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:0 animations:^{
+            self.viewTable.view.frame = frame;
+        } completion:^(BOOL finished) {
+            [self.viewTable didMoveToParentViewController:self];
+            self.navigationItem.leftBarButtonItem.enabled = YES;
+        }];
+    }
+    else {
+        [self.viewTable willMoveToParentViewController:nil];
+        CGRect frame = self.viewTable.view.frame;
+        frame.origin.y += frame.size.height;
+        [UIView animateWithDuration:0.2 delay:0.0 usingSpringWithDamping:1.5 initialSpringVelocity:-20 options:0 animations:^{
+            self.viewTable.view.frame = frame;
+        } completion:^(BOOL finished) {
+            [self.viewTable removeFromParentViewController];
+            [self.viewTable.view removeFromSuperview];
+            self.viewTable = nil;
+            self.navigationItem.leftBarButtonItem.enabled = YES;
+        }];
+    }
 }
 
 #pragma mark - Navigation controller delegate
@@ -696,67 +683,109 @@ typedef enum : NSInteger {
 #pragma mark - UIViewController animated transitioning
 
 - (NSTimeInterval)transitionDuration:(id <UIViewControllerContextTransitioning>)transitionContext {
-  return 0.4;
+    return 0.4;
 }
 
 - (void)animateTransition:(id <UIViewControllerContextTransitioning>)transitionContext {
-  UIViewController *toVC = [transitionContext viewControllerForKey:UITransitionContextToViewControllerKey];
-  UIViewController *fromVC = [transitionContext viewControllerForKey:UITransitionContextFromViewControllerKey];
-  CGFloat delta = toVC == self ? 44.0 : fromVC == self ? -44.0 : 0;
-  
-  CGRect frame = self.navigationController.navigationBar.frame;
-  frame.size.height += delta;
-  
-  [[transitionContext containerView] addSubview:fromVC.view];
-  [[transitionContext containerView] addSubview:toVC.view];
-  
-  CGRect fromStartFrame = [transitionContext initialFrameForViewController:fromVC];
-  CGRect toStartFrame = fromStartFrame;
-  toStartFrame.origin.x = toStartFrame.size.width;
-  if (self.navigationOperation == UINavigationControllerOperationPop) toStartFrame.origin.x *= -1;
-  
-  CGRect toEndFrame = fromStartFrame;
-  CGRect fromEndFrame = toStartFrame;
-  fromEndFrame.origin.x *= -1;
-  
-  fromVC.view.frame = fromStartFrame;
-  toVC.view.frame = toStartFrame;
-  
-  [UIView animateWithDuration:[self transitionDuration:transitionContext] animations:^{
-    self.navigationController.navigationBar.frame = frame;
+    UIViewController *toVC = [transitionContext viewControllerForKey:UITransitionContextToViewControllerKey];
+    UIViewController *fromVC = [transitionContext viewControllerForKey:UITransitionContextFromViewControllerKey];
+    CGFloat delta = toVC == self ? 44.0 : fromVC == self ? -44.0 : 0;
     
-    fromVC.view.frame = fromEndFrame;
-    toVC.view.frame = toEndFrame;
+    CGRect frame = self.navigationController.navigationBar.frame;
+    frame.size.height += delta;
     
-  } completion:^(BOOL finished) {
-    [transitionContext completeTransition:YES];
-  }];
+    [[transitionContext containerView] addSubview:fromVC.view];
+    [[transitionContext containerView] addSubview:toVC.view];
+    
+    CGRect fromStartFrame = [transitionContext initialFrameForViewController:fromVC];
+    CGRect toStartFrame = fromStartFrame;
+    toStartFrame.origin.x = toStartFrame.size.width;
+    if (self.navigationOperation == UINavigationControllerOperationPop) toStartFrame.origin.x *= -1;
+    
+    CGRect toEndFrame = fromStartFrame;
+    CGRect fromEndFrame = toStartFrame;
+    fromEndFrame.origin.x *= -1;
+    
+    fromVC.view.frame = fromStartFrame;
+    toVC.view.frame = toStartFrame;
+    
+    [UIView animateWithDuration:[self transitionDuration:transitionContext] animations:^{
+        self.navigationController.navigationBar.frame = frame;
+        
+        fromVC.view.frame = fromEndFrame;
+        toVC.view.frame = toEndFrame;
+        
+    } completion:^(BOOL finished) {
+        [transitionContext completeTransition:YES];
+    }];
 }
 
 #pragma mark - Table View
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-  return _objects.count;
+    return _objects.count;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-  SGTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"Cell" forIndexPath:indexPath];
-  cell.photoView.image = self.objects[indexPath.row];
-  return cell;
+    SGTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"Cell" forIndexPath:indexPath];
+    cell.image = self.objects[indexPath.row];
+    return cell;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-  SGDetailViewController *detailController = [[SGDetailViewController alloc] init];
-  detailController.detailItem = self.objects[indexPath.row];
-  [self.navigationController setNavigationBarHidden:NO animated:NO];
-  [self.navigationController pushViewController:detailController animated:YES];
+    SGDetailViewController *detailController = [[SGDetailViewController alloc] init];
+    detailController.detailItem = self.objects[indexPath.row];
+    [self.navigationController setNavigationBarHidden:NO animated:NO];
+    [self.navigationController pushViewController:detailController animated:YES];
 }
 
 - (BOOL)scrollViewShouldScrollToTop:(UIScrollView *)scrollView {
-    CGRect frame = self.header.frame;
-    frame.origin.y = CGRectGetMaxY(self.navigationController.navigationBar.frame);
-    self.header.frame = frame;
+    if (self.headerStyle == SGHeaderStyleHide) {
+        CGRect frame = self.header.frame;
+        frame.origin.y = CGRectGetMaxY(self.navigationController.navigationBar.frame);
+        self.header.frame = frame;
+    }
+    else if (self.headerStyle == SGHeaderStyleShrink) {
+        SGShrinkingSegmentedControlPanel *header = (SGShrinkingSegmentedControlPanel *)self.header;
+        [header setShrinkage:0 animated:YES];
+    }
     return YES;
+}
+
+- (void)showHeader {
+    if (self.tableView.isDecelerating && !self.tableView.isTracking) {
+        self.tableView.contentOffset = self.tableView.contentOffset;
+        SGShrinkingSegmentedControlPanel *header = (SGShrinkingSegmentedControlPanel *)self.header;
+        [header setShrinkage:0.0 animated:YES];
+        [self.titleView setCrossFade:0.0 animated:YES];
+    }
+}
+
+- (void)hideOrShowHeader {
+    SGShrinkingSegmentedControlPanel *header = (SGShrinkingSegmentedControlPanel *)self.header;
+    CGFloat normalizedOffset = self.tableView.contentOffset.y + self.tableView.contentInset.top;
+    CGFloat hideThreshold = floorf([header maxShrinkage] / 2.0);
+    
+    if (header.shrinkage < hideThreshold || normalizedOffset < [header maxShrinkage]) {
+        [header setShrinkage:0 animated:YES];
+        [self.titleView setCrossFade:0.0 animated:YES];
+    }
+    else {
+        [header setShrinkage:[header maxShrinkage] animated:YES];
+        [self.titleView setCrossFade:1.0 animated:YES];
+    }
+}
+
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
+    if (!decelerate && self.headerStyle == SGHeaderStyleShrink) {
+        [self hideOrShowHeader];
+    }
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
+    if (self.headerStyle == SGHeaderStyleShrink) {
+        [self hideOrShowHeader];
+    }
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
@@ -795,15 +824,23 @@ typedef enum : NSInteger {
     else if (self.headerStyle == SGHeaderStyleShrink) {
         SGShrinkingSegmentedControlPanel *header = (SGShrinkingSegmentedControlPanel *)self.header;
         CGFloat normalizedOffset = scrollView.contentOffset.y + scrollView.contentInset.top;
+        
         BOOL offsetInBounds = normalizedOffset > 0 && normalizedOffset < scrollView.contentSize.height - scrollView.bounds.size.height;
         BOOL offsetNearTop = normalizedOffset < 44.0;
         BOOL decelerating = scrollView.isDecelerating && !scrollView.isTracking;
-        BOOL dragging = scrollView.isTracking;
+        BOOL touching = scrollView.isTracking;
         
-        if ((decelerating && normalizedOffset > 0) || (dragging && header.shrinkage < [header maxShrinkage]) || (offsetNearTop && offsetInBounds)) {
-            CGFloat scrollDelta = scrollView.contentOffset.y - self.lastTableContentOffset.y; // neg -> scrolling down
-            header.shrinkage += scrollDelta;
+        CGFloat scrollDelta = scrollView.contentOffset.y - self.lastTableContentOffset.y;
+        BOOL wantsToGrow = scrollDelta < 0;
+        
+        if (offsetInBounds || (normalizedOffset < 0 && wantsToGrow)) {
+            if ((decelerating) || (touching && offsetInBounds && header.shrinkage < [header maxShrinkage]) || (offsetNearTop && offsetInBounds)) {
+                header.shrinkage += scrollDelta;
+            }
         }
+        
+        CGFloat fade = header.shrinkage / [header maxShrinkage];
+        self.titleView.crossFade = fade;
     }
     
     self.lastTableContentOffset = scrollView.contentOffset;

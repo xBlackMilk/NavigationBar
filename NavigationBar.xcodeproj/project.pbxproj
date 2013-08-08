@@ -7,17 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0134CC8917B3737100F11031 /* libGPUImage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C649A17A3339C005D5B09 /* libGPUImage.a */; };
 		015C646E179E27EC005D5B09 /* UIImage+ImageEffects.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C646D179E27EC005D5B09 /* UIImage+ImageEffects.m */; };
 		015C647117A096DC005D5B09 /* SGViewTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C647017A096DC005D5B09 /* SGViewTableViewController.m */; };
 		015C647417A0B440005D5B09 /* SGNavigationBar.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C647317A0B440005D5B09 /* SGNavigationBar.m */; };
 		015C647717A2ED42005D5B09 /* SGNavigationController.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C647617A2ED42005D5B09 /* SGNavigationController.m */; };
 		015C649017A33124005D5B09 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C648F17A33124005D5B09 /* QuartzCore.framework */; };
 		015C649217A3313B005D5B09 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C649117A3313B005D5B09 /* CoreImage.framework */; };
-		015C649E17A33DCD005D5B09 /* libGPUImage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C649A17A3339C005D5B09 /* libGPUImage.a */; };
 		015C64A017A34996005D5B09 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C649F17A34996005D5B09 /* Accelerate.framework */; };
 		015C64A217A3499D005D5B09 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C64A117A3499D005D5B09 /* CoreVideo.framework */; };
 		015C64A417A349A2005D5B09 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C64A317A349A2005D5B09 /* CoreMedia.framework */; };
-		015C64A617A349AD005D5B09 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C64A517A349AD005D5B09 /* OpenGLES.framework */; };
 		015C64AA17A3640C005D5B09 /* SGBlurView.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C64A917A3640C005D5B09 /* SGBlurView.m */; };
 		01B483BC179DEC43008C6559 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B483BB179DEC43008C6559 /* Foundation.framework */; };
 		01B483BE179DEC43008C6559 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B483BD179DEC43008C6559 /* CoreGraphics.framework */; };
@@ -104,15 +103,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				015C64A617A349AD005D5B09 /* OpenGLES.framework in Frameworks */,
 				015C64A417A349A2005D5B09 /* CoreMedia.framework in Frameworks */,
 				015C64A217A3499D005D5B09 /* CoreVideo.framework in Frameworks */,
 				015C64A017A34996005D5B09 /* Accelerate.framework in Frameworks */,
-				015C649E17A33DCD005D5B09 /* libGPUImage.a in Frameworks */,
 				015C649217A3313B005D5B09 /* CoreImage.framework in Frameworks */,
 				015C649017A33124005D5B09 /* QuartzCore.framework in Frameworks */,
 				01B483BE179DEC43008C6559 /* CoreGraphics.framework in Frameworks */,
 				01B483C0179DEC43008C6559 /* UIKit.framework in Frameworks */,
+				0134CC8917B3737100F11031 /* libGPUImage.a in Frameworks */,
 				01B483BC179DEC43008C6559 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
