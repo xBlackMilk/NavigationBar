@@ -26,8 +26,11 @@
     // opacity
     UINavigationBar *bar = nav.navigationBar;
     [bar setShadowImage:[UIImage imageNamed:@"clearpix"]];
+  bar.barTintColor = [UIColor colorWithRed:218.0/255.0 green:80.0/255.0 blue:15.0/255.0 alpha:1.0];
+  bar.translucent = NO;
 //    [bar setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarPosition:UIBarPositionAny barMetrics:UIBarMetricsDefault];
-    [bar setBackgroundImage:[UIImage imageNamed:@"orangepix"] forBarMetrics:UIBarMetricsDefault]; // iOS 6 friendly
+//    [bar setBackgroundImage:[UIImage imageNamed:@"orange_pixel"] forBarMetrics:UIBarMetricsDefault]; // iOS 6 friendly
+  
                                                                                                   //    bar.barTintColor = [UIColor orangeColor];
     nav.navigationBar.tintColor = [UIColor whiteColor];
     [nav.navigationBar setTitleTextAttributes:@{NSForegroundColorAttributeName : [UIColor whiteColor]}];

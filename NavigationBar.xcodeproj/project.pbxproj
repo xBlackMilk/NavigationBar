@@ -7,17 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0134CC8917B3737100F11031 /* libGPUImage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C649A17A3339C005D5B09 /* libGPUImage.a */; };
 		015C646E179E27EC005D5B09 /* UIImage+ImageEffects.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C646D179E27EC005D5B09 /* UIImage+ImageEffects.m */; };
 		015C647117A096DC005D5B09 /* SGViewTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C647017A096DC005D5B09 /* SGViewTableViewController.m */; };
 		015C647417A0B440005D5B09 /* SGNavigationBar.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C647317A0B440005D5B09 /* SGNavigationBar.m */; };
 		015C647717A2ED42005D5B09 /* SGNavigationController.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C647617A2ED42005D5B09 /* SGNavigationController.m */; };
-		015C649017A33124005D5B09 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C648F17A33124005D5B09 /* QuartzCore.framework */; };
-		015C649217A3313B005D5B09 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C649117A3313B005D5B09 /* CoreImage.framework */; };
-		015C64A017A34996005D5B09 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C649F17A34996005D5B09 /* Accelerate.framework */; };
-		015C64A217A3499D005D5B09 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C64A117A3499D005D5B09 /* CoreVideo.framework */; };
-		015C64A417A349A2005D5B09 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C64A317A349A2005D5B09 /* CoreMedia.framework */; };
 		015C64AA17A3640C005D5B09 /* SGBlurView.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C64A917A3640C005D5B09 /* SGBlurView.m */; };
+		01756F1B17B3794800F0FCAC /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 015C64A517A349AD005D5B09 /* OpenGLES.framework */; };
+		01AABE8317B46F3B0090B699 /* SGSegmentBarController.m in Sources */ = {isa = PBXBuildFile; fileRef = 01AABE8217B46F3B0090B699 /* SGSegmentBarController.m */; };
+		01AABE8617B46FA00090B699 /* SGSegmentBar.m in Sources */ = {isa = PBXBuildFile; fileRef = 01AABE8517B46FA00090B699 /* SGSegmentBar.m */; };
+		01AABE8917B491990090B699 /* SGCrossfadingLabelView.m in Sources */ = {isa = PBXBuildFile; fileRef = 01AABE8817B491990090B699 /* SGCrossfadingLabelView.m */; };
 		01B483BC179DEC43008C6559 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B483BB179DEC43008C6559 /* Foundation.framework */; };
 		01B483BE179DEC43008C6559 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B483BD179DEC43008C6559 /* CoreGraphics.framework */; };
 		01B483C0179DEC43008C6559 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B483BF179DEC43008C6559 /* UIKit.framework */; };
@@ -35,20 +33,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		015C649917A3339C005D5B09 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 015C649317A3339C005D5B09 /* GPUImage.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = BCF1A33414DDB1EC00852800;
-			remoteInfo = GPUImage;
-		};
-		015C649B17A3339C005D5B09 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 015C649317A3339C005D5B09 /* GPUImage.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = BCF1A34414DDB1EC00852800;
-			remoteInfo = GPUImageTests;
-		};
 		01B483E1179DEC43008C6559 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 01B483B0179DEC43008C6559 /* Project object */;
@@ -69,13 +53,18 @@
 		015C647617A2ED42005D5B09 /* SGNavigationController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGNavigationController.m; sourceTree = "<group>"; };
 		015C648F17A33124005D5B09 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		015C649117A3313B005D5B09 /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
-		015C649317A3339C005D5B09 /* GPUImage.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = GPUImage.xcodeproj; path = GPUImage/GPUImage.xcodeproj; sourceTree = "<group>"; };
 		015C649F17A34996005D5B09 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		015C64A117A3499D005D5B09 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
 		015C64A317A349A2005D5B09 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		015C64A517A349AD005D5B09 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		015C64A817A3640C005D5B09 /* SGBlurView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGBlurView.h; sourceTree = "<group>"; };
 		015C64A917A3640C005D5B09 /* SGBlurView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGBlurView.m; sourceTree = "<group>"; };
+		01AABE8117B46F3B0090B699 /* SGSegmentBarController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGSegmentBarController.h; sourceTree = "<group>"; };
+		01AABE8217B46F3B0090B699 /* SGSegmentBarController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGSegmentBarController.m; sourceTree = "<group>"; };
+		01AABE8417B46FA00090B699 /* SGSegmentBar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGSegmentBar.h; sourceTree = "<group>"; };
+		01AABE8517B46FA00090B699 /* SGSegmentBar.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGSegmentBar.m; sourceTree = "<group>"; };
+		01AABE8717B491990090B699 /* SGCrossfadingLabelView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGCrossfadingLabelView.h; sourceTree = "<group>"; };
+		01AABE8817B491990090B699 /* SGCrossfadingLabelView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGCrossfadingLabelView.m; sourceTree = "<group>"; };
 		01B483B8179DEC43008C6559 /* NavigationBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NavigationBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		01B483BB179DEC43008C6559 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		01B483BD179DEC43008C6559 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -103,14 +92,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				015C64A417A349A2005D5B09 /* CoreMedia.framework in Frameworks */,
-				015C64A217A3499D005D5B09 /* CoreVideo.framework in Frameworks */,
-				015C64A017A34996005D5B09 /* Accelerate.framework in Frameworks */,
-				015C649217A3313B005D5B09 /* CoreImage.framework in Frameworks */,
-				015C649017A33124005D5B09 /* QuartzCore.framework in Frameworks */,
+				01756F1B17B3794800F0FCAC /* OpenGLES.framework in Frameworks */,
 				01B483BE179DEC43008C6559 /* CoreGraphics.framework in Frameworks */,
 				01B483C0179DEC43008C6559 /* UIKit.framework in Frameworks */,
-				0134CC8917B3737100F11031 /* libGPUImage.a in Frameworks */,
 				01B483BC179DEC43008C6559 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -128,15 +112,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		015C649417A3339C005D5B09 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				015C649A17A3339C005D5B09 /* libGPUImage.a */,
-				015C649C17A3339C005D5B09 /* GPUImageTests.octest */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
 		01B483AF179DEC43008C6559 = {
 			isa = PBXGroup;
 			children = (
@@ -163,7 +138,6 @@
 				015C64A317A349A2005D5B09 /* CoreMedia.framework */,
 				015C64A117A3499D005D5B09 /* CoreVideo.framework */,
 				015C649F17A34996005D5B09 /* Accelerate.framework */,
-				015C649317A3339C005D5B09 /* GPUImage.xcodeproj */,
 				015C649117A3313B005D5B09 /* CoreImage.framework */,
 				015C648F17A33124005D5B09 /* QuartzCore.framework */,
 				01B483BB179DEC43008C6559 /* Foundation.framework */,
@@ -181,6 +155,12 @@
 				01B483CB179DEC43008C6559 /* SGAppDelegate.m */,
 				015C646F17A096DC005D5B09 /* SGViewTableViewController.h */,
 				015C647017A096DC005D5B09 /* SGViewTableViewController.m */,
+				01AABE8117B46F3B0090B699 /* SGSegmentBarController.h */,
+				01AABE8217B46F3B0090B699 /* SGSegmentBarController.m */,
+				01AABE8417B46FA00090B699 /* SGSegmentBar.h */,
+				01AABE8517B46FA00090B699 /* SGSegmentBar.m */,
+				01AABE8717B491990090B699 /* SGCrossfadingLabelView.h */,
+				01AABE8817B491990090B699 /* SGCrossfadingLabelView.m */,
 				01B483D0179DEC43008C6559 /* SGMasterViewController.h */,
 				01B483D1179DEC43008C6559 /* SGMasterViewController.m */,
 				01B483D3179DEC43008C6559 /* SGDetailViewController.h */,
@@ -295,12 +275,6 @@
 			mainGroup = 01B483AF179DEC43008C6559;
 			productRefGroup = 01B483B9179DEC43008C6559 /* Products */;
 			projectDirPath = "";
-			projectReferences = (
-				{
-					ProductGroup = 015C649417A3339C005D5B09 /* Products */;
-					ProjectRef = 015C649317A3339C005D5B09 /* GPUImage.xcodeproj */;
-				},
-			);
 			projectRoot = "";
 			targets = (
 				01B483B7179DEC43008C6559 /* NavigationBar */,
@@ -308,23 +282,6 @@
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXReferenceProxy section */
-		015C649A17A3339C005D5B09 /* libGPUImage.a */ = {
-			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libGPUImage.a;
-			remoteRef = 015C649917A3339C005D5B09 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		015C649C17A3339C005D5B09 /* GPUImageTests.octest */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.cfbundle;
-			path = GPUImageTests.octest;
-			remoteRef = 015C649B17A3339C005D5B09 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		01B483B6179DEC43008C6559 /* Resources */ = {
@@ -354,9 +311,12 @@
 				015C647417A0B440005D5B09 /* SGNavigationBar.m in Sources */,
 				015C647717A2ED42005D5B09 /* SGNavigationController.m in Sources */,
 				01B483CC179DEC43008C6559 /* SGAppDelegate.m in Sources */,
+				01AABE8917B491990090B699 /* SGCrossfadingLabelView.m in Sources */,
+				01AABE8617B46FA00090B699 /* SGSegmentBar.m in Sources */,
 				015C646E179E27EC005D5B09 /* UIImage+ImageEffects.m in Sources */,
 				01B483C8179DEC43008C6559 /* main.m in Sources */,
 				015C647117A096DC005D5B09 /* SGViewTableViewController.m in Sources */,
+				01AABE8317B46F3B0090B699 /* SGSegmentBarController.m in Sources */,
 				01B483D2179DEC43008C6559 /* SGMasterViewController.m in Sources */,
 				015C64AA17A3640C005D5B09 /* SGBlurView.m in Sources */,
 				01B483D5179DEC43008C6559 /* SGDetailViewController.m in Sources */,

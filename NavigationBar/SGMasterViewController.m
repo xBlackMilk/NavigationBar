@@ -27,7 +27,6 @@
 #import "SGDetailViewController.h"
 #import "UIImage+ImageEffects.h"
 #import "SGViewTableViewController.h"
-#import "GPUImage.h"
 
 typedef enum {
     SGBlurMethodToolbar,
@@ -97,11 +96,11 @@ static CIContext *kCoreImageContext = nil;
         [blurFilter setValue:clampOutput forKey:kCIInputImageKey];
         [blurFilter setValue:@(self.blurRadius) forKey:kCIInputRadiusKey];
         CIImage *blurOutput = [blurFilter valueForKey:kCIOutputImageKey];
-      
-      CIFilter *darkenFilter = [CIFilter filterWithName:@"CIExposureAdjust"];
-      [darkenFilter setValue:blurOutput forKey:kCIInputImageKey];
-      [darkenFilter setValue:@-.3 forKey:kCIInputEVKey];
-      CIImage *darkenOutput = [darkenFilter valueForKey:kCIOutputImageKey];
+
+        CIFilter *darkenFilter = [CIFilter filterWithName:@"CIExposureAdjust"];
+        [darkenFilter setValue:blurOutput forKey:kCIInputImageKey];
+        [darkenFilter setValue:@-.3 forKey:kCIInputEVKey];
+        CIImage *darkenOutput = [darkenFilter valueForKey:kCIOutputImageKey];
         
         CIFilter *cropFilter = [CIFilter filterWithName:@"CICrop"];
         [cropFilter setValue:darkenOutput forKey:kCIInputImageKey];
@@ -120,25 +119,25 @@ static CIContext *kCoreImageContext = nil;
         CGImageRelease(cgImage);
     }
     else {
-        GPUImagePicture *gpuImage = [[GPUImagePicture alloc] initWithImage:self.inputImage];
-        // broken
-        GPUImageCropFilter *cropper = [[GPUImageCropFilter alloc] initWithCropRegion:self.blurRegion];
-        GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
-        blur.blurPasses = 2;
-        blur.blurSize = 1.5;
-        
-        [gpuImage addTarget:cropper];
-        [cropper addTarget:blur];
-        [gpuImage processImage];
-        
-        if ([self isCancelled]) {
-            [self prepareExit];
-            return;
-        }
-        
-        CGImageRef cgImage = [blur newCGImageFromCurrentlyProcessedOutput];
-        outputImage = [UIImage imageWithCGImage:cgImage scale:self.inputImage.scale orientation:self.inputImage.imageOrientation];
-        CGImageRelease(cgImage);
+//        GPUImagePicture *gpuImage = [[GPUImagePicture alloc] initWithImage:self.inputImage];
+//        // broken
+//        GPUImageCropFilter *cropper = [[GPUImageCropFilter alloc] initWithCropRegion:self.blurRegion];
+//        GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
+//        blur.blurPasses = 2;
+//        blur.blurSize = 1.5;
+//        
+//        [gpuImage addTarget:cropper];
+//        [cropper addTarget:blur];
+//        [gpuImage processImage];
+//        
+//        if ([self isCancelled]) {
+//            [self prepareExit];
+//            return;
+//        }
+//        
+//        CGImageRef cgImage = [blur newCGImageFromCurrentlyProcessedOutput];
+//        outputImage = [UIImage imageWithCGImage:cgImage scale:self.inputImage.scale orientation:self.inputImage.imageOrientation];
+//        CGImageRelease(cgImage);
     }
     
     if ([self isCancelled]) {
@@ -167,9 +166,9 @@ static NSOperationQueue *kBlurringOperationQueue;
 @property (nonatomic, readonly) UIImageView *photoView;
 @property (nonatomic, strong) UIImage *image;
 @property (nonatomic, readonly) UIImage *blurredImage;
-@property (nonatomic, readonly) GPUImageView *gpuImageView;
-@property (nonatomic, readonly) GPUImageFilter *gpuFilter;
-@property (nonatomic, readonly) GPUImagePicture *gpuSource;
+//@property (nonatomic, readonly) GPUImageView *gpuImageView;
+//@property (nonatomic, readonly) GPUImageFilter *gpuFilter;
+//@property (nonatomic, readonly) GPUImagePicture *gpuSource;
 @property (nonatomic) SGBlurMethod blurMethod;
 @property (nonatomic, strong) SGImageBlurOperation *blurOperation;
 @end
@@ -209,17 +208,17 @@ static NSOperationQueue *kBlurringOperationQueue;
             [kBlurringOperationQueue setName:@"com.snapguide.blur"];
         }
         
-        if (self.blurMethod == SGBlurMethodGPUImage) {
-            GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
-            blur.blurPasses = 2;
-            blur.blurSize = 1.5;
-            _gpuFilter = blur;
-            
-            UIView *overlay = [[UIView alloc] initWithFrame:blurFrame];
-            overlay.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.15];
-            overlay.autoresizingMask = blurAutoresizingMask;
-            [self.contentView addSubview:overlay];
-        }
+//        if (self.blurMethod == SGBlurMethodGPUImage) {
+//            GPUImageFastBlurFilter *blur = [[GPUImageFastBlurFilter alloc] init];
+//            blur.blurPasses = 2;
+//            blur.blurSize = 1.5;
+//            _gpuFilter = blur;
+//            
+//            UIView *overlay = [[UIView alloc] initWithFrame:blurFrame];
+//            overlay.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.15];
+//            overlay.autoresizingMask = blurAutoresizingMask;
+//            [self.contentView addSubview:overlay];
+//        }
     }
     return self;
 }
@@ -266,7 +265,7 @@ static NSOperationQueue *kBlurringOperationQueue;
     };
     [kBlurringOperationQueue addOperation:self.blurOperation];
     return nil;
-    return [self.gpuFilter imageByFilteringImage:image];
+
     return image;
 }
 
@@ -349,7 +348,6 @@ static NSOperationQueue *kBlurringOperationQueue;
     self = [super initWithFrame:frame];
     if (self) {
         _segmentedControl = [[UISegmentedControl alloc] initWithItems:@[]];
-        //        _segmentedControl.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin;
         [self addSubview:self.segmentedControl];
         [self updateSegmentedControlFrame];
         self.clipsToBounds = YES;
@@ -540,14 +538,14 @@ typedef enum : NSInteger {
         }
         else if (self.headerStyle == SGHeaderStyleShrink) {
             SGShrinkingSegmentedControlPanel *header = [[SGShrinkingSegmentedControlPanel alloc] init];
-            header.backgroundColor = [UIColor colorWithRed:250.0/255.0 green:100.0/255.0 blue:14.0/255.0 alpha:1.0];
+            header.backgroundColor = self.navigationController.navigationBar.barTintColor;
             [header.segmentedControl insertSegmentWithTitle:@"Topics" atIndex:0 animated:NO];
             [header.segmentedControl insertSegmentWithTitle:@"Popular" atIndex:1 animated:NO];
             [header.segmentedControl insertSegmentWithTitle:@"Recent" atIndex:2 animated:NO];
-            header.segmentedControl.backgroundColor = [UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
+            header.segmentedControl.backgroundColor = [UIColor colorWithRed:181.0/255.0 green:60.0/255.0 blue:0 alpha:1];
             header.segmentedControl.selectedSegmentIndex = 1;
             [header.segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
-            header.tintColor = [UIColor whiteColor];
+            header.tintColor = [UIColor colorWithRed:246.0/255.0 green:241.0/255.0 blue:234.0/255.0 alpha:1];
             self.header = header;
             
             self.titleView = [[SGCrossfadingLabelView alloc] init];
