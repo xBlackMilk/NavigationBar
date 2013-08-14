@@ -43,7 +43,6 @@
     SGTableViewController *tvc3 = [[SGTableViewController alloc] init];
     SGSegmentBarController *sbc = [[SGSegmentBarController alloc] init];
     sbc.segmentBar.tintColor = [UIColor colorWithRed:246.0/255.0 green:241.0/255.0 blue:234.0/255.0 alpha:1.0];
-//    sbc.segmentBar.segmentedControl.backgroundColor = [UIColor colorWithRed:193.0/255.0 green:64.0/255.0 blue:0.0 alpha:1.0];
     sbc.segmentBar.backgroundColor = bar.barTintColor;
     sbc.title = @"Explore";
     tvc1.title = @"Popular";

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0107CC7717BC2766006D1FD3 /* SGSegmentBarControllerTransitionAnimator.m in Sources */ = {isa = PBXBuildFile; fileRef = 0107CC7617BC2766006D1FD3 /* SGSegmentBarControllerTransitionAnimator.m */; };
 		015C646E179E27EC005D5B09 /* UIImage+ImageEffects.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C646D179E27EC005D5B09 /* UIImage+ImageEffects.m */; };
 		015C647117A096DC005D5B09 /* SGViewTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C647017A096DC005D5B09 /* SGViewTableViewController.m */; };
 		015C647417A0B440005D5B09 /* SGNavigationBar.m in Sources */ = {isa = PBXBuildFile; fileRef = 015C647317A0B440005D5B09 /* SGNavigationBar.m */; };
@@ -45,6 +46,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0107CC7517BC2766006D1FD3 /* SGSegmentBarControllerTransitionAnimator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGSegmentBarControllerTransitionAnimator.h; sourceTree = "<group>"; };
+		0107CC7617BC2766006D1FD3 /* SGSegmentBarControllerTransitionAnimator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGSegmentBarControllerTransitionAnimator.m; sourceTree = "<group>"; };
 		015C646C179E27EC005D5B09 /* UIImage+ImageEffects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImage+ImageEffects.h"; sourceTree = "<group>"; };
 		015C646D179E27EC005D5B09 /* UIImage+ImageEffects.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImage+ImageEffects.m"; sourceTree = "<group>"; };
 		015C646F17A096DC005D5B09 /* SGViewTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGViewTableViewController.h; sourceTree = "<group>"; };
@@ -169,6 +172,8 @@
 				01AABE9117B99DC40090B699 /* UIImageView+Additions.m */,
 				01AABE8117B46F3B0090B699 /* SGSegmentBarController.h */,
 				01AABE8217B46F3B0090B699 /* SGSegmentBarController.m */,
+				0107CC7517BC2766006D1FD3 /* SGSegmentBarControllerTransitionAnimator.h */,
+				0107CC7617BC2766006D1FD3 /* SGSegmentBarControllerTransitionAnimator.m */,
 				01AABE8417B46FA00090B699 /* SGSegmentBar.h */,
 				01AABE8517B46FA00090B699 /* SGSegmentBar.m */,
 				01AABE8717B491990090B699 /* SGCrossfadingLabelView.h */,
@@ -322,6 +327,7 @@
 				015C647717A2ED42005D5B09 /* SGNavigationController.m in Sources */,
 				01B483CC179DEC43008C6559 /* SGAppDelegate.m in Sources */,
 				01AABE8917B491990090B699 /* SGCrossfadingLabelView.m in Sources */,
+				0107CC7717BC2766006D1FD3 /* SGSegmentBarControllerTransitionAnimator.m in Sources */,
 				01AABE8617B46FA00090B699 /* SGSegmentBar.m in Sources */,
 				015C646E179E27EC005D5B09 /* UIImage+ImageEffects.m in Sources */,
 				01B483C8179DEC43008C6559 /* main.m in Sources */,

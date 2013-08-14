@@ -23,12 +23,21 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    self.refreshControl = [[UIRefreshControl alloc] init];
+    [self.refreshControl addTarget:self action:@selector(refresh) forControlEvents:UIControlEventValueChanged];
     self.tableView.rowHeight = self.view.bounds.size.width;
     [self.tableView registerClass:[SGTableViewCell class] forCellReuseIdentifier:@"Cell"];
     [self loadImages];
 }
 
 #pragma mark - Data
+
+- (void)refresh {
+    [self.refreshControl beginRefreshing];
+    [self loadImages];
+    [self.tableView reloadData];
+    [self.refreshControl endRefreshing];
+}
 
 - (NSInteger)assetCount {
     return 16;

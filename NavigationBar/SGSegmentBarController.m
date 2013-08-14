@@ -9,6 +9,7 @@
 #import "SGSegmentBarController.h"
 
 #import "SGCrossfadingLabelView.h"
+//#import "SGSegmentBarControllerTransitionAnimator.h"
 #import <objc/objc-runtime.h>
 
 
@@ -61,9 +62,10 @@ static const CGFloat kSGSegmentBarControllerBarHeight = 44.0;
 
 
 
-@interface SGSegmentBarController ()
+@interface SGSegmentBarController ()// <UIViewControllerTransitioningDelegate>
 @property (nonatomic, strong) SGCrossfadingLabelView *titleView;
 @property (nonatomic, strong) UIScrollView *scrollView;
+@property (nonatomic, strong) NSMutableArray *viewLoadedMap;
 @end
 
 @implementation SGSegmentBarController
@@ -95,21 +97,12 @@ static const CGFloat kSGSegmentBarControllerBarHeight = 44.0;
     [self addSegmentBar];
     
     if (!self.selectedViewController && [self.viewControllers count]) {
-        self.selectedViewController = self.viewControllers[0];
+        self.selectedIndex = 0;
     }
     
     [self loadViewController:self.selectedViewController];
     [self setUpTitleView];
     [self loadViewControllerTitles];
-}
-
-- (void)addSegmentBar {
-    CGFloat height = [self respondsToSelector:@selector(topLayoutGuide)] ? [[self topLayoutGuide] length] : 0.0;
-    CGRect frame = CGRectMake(0.0, height, self.view.bounds.size.width, kSGSegmentBarControllerBarHeight);
-    
-    self.segmentBar.frame = frame;
-    [self.segmentBar.segmentedControl addTarget:self action:@selector(segmentControllerChanged:) forControlEvents:UIControlEventValueChanged];
-    [self.view addSubview:self.segmentBar];
 }
 
 - (void)setUpTitleView {
@@ -130,7 +123,7 @@ static const CGFloat kSGSegmentBarControllerBarHeight = 44.0;
     [self.titleView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(showSegmentBar)]];
 }
 
-#pragma mark - Lazy loading properties
+#pragma mark - Segment bar management
 
 - (SGSegmentBar *)segmentBar {
     if (!_segmentBar) {
@@ -139,10 +132,23 @@ static const CGFloat kSGSegmentBarControllerBarHeight = 44.0;
     return _segmentBar;
 }
 
+- (void)addSegmentBar {
+    CGFloat height = [self respondsToSelector:@selector(topLayoutGuide)] ? [[self topLayoutGuide] length] : 0.0;
+    CGRect frame = CGRectMake(0.0, height, self.view.bounds.size.width, kSGSegmentBarControllerBarHeight);
+    
+    self.segmentBar.frame = frame;
+    [self.segmentBar.segmentedControl addTarget:self action:@selector(segmentControllerChanged:) forControlEvents:UIControlEventValueChanged];
+    [self.view addSubview:self.segmentBar];
+}
+
 - (void)segmentControllerChanged:(UISegmentedControl *)segmentedControl {
     self.selectedIndex = self.segmentBar.segmentedControl.selectedSegmentIndex;
-    self.titleView.detailLabel.text = [self.segmentBar.segmentedControl titleForSegmentAtIndex:self.selectedIndex];
-    [self.titleView sizeToFit];
+//    NSUInteger selectedIndex = self.segmentBar.segmentedControl.selectedSegmentIndex;
+//    
+//    UIViewController *presentedController = self.viewControllers[selectedIndex];
+//    presentedController.transitioningDelegate = self;
+//    presentedController.modalPresentationStyle = UIModalPresentationCustom;
+//    [self.selectedViewController presentViewController:presentedController animated:YES completion:^{_selectedIndex = selectedIndex;}];
 }
 
 - (void)showSegmentBar {
@@ -157,36 +163,44 @@ static const CGFloat kSGSegmentBarControllerBarHeight = 44.0;
 
 #pragma mark - Child view controller management
 
+- (BOOL)hasLoadedViewController:(UIViewController *)viewController {
+    NSUInteger index = [self.viewControllers indexOfObject:viewController];
+    return [self.viewLoadedMap[index] boolValue];
+}
+
+- (void)setHasLoadedViewController:(UIViewController *)viewController {
+    NSUInteger index = [self.viewControllers indexOfObject:viewController];
+    self.viewLoadedMap[index] = @YES;
+}
+
 - (void)loadViewController:(UIViewController *)viewController {
-    if ([viewController parentViewController] == self) {
+    if ([viewController parentViewController] == self || !self.isViewLoaded || !viewController) {
         return;
     }
     
-    if (self.isViewLoaded && viewController) {
-        BOOL loadingView = !viewController.isViewLoaded;
+    [viewController willMoveToParentViewController:self];
+    [self.view addSubview:viewController.view];
+    [self addChildViewController:viewController];
+    [viewController didMoveToParentViewController:self];
+    
+    viewController.view.frame = self.view.bounds;
+    viewController.view.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+    
+    if ([viewController.view isKindOfClass:[UIScrollView class]]) {
+        self.scrollView = (UIScrollView *)viewController.view;
+        [self setUpKVOForScrollView:self.scrollView];
         
-        [viewController willMoveToParentViewController:self];
-        [self.view addSubview:viewController.view];
-        [self addChildViewController:viewController];
-        [viewController didMoveToParentViewController:self];
-        
-        viewController.view.frame = self.view.bounds;
-        viewController.view.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
-        
-        if ([viewController.view isKindOfClass:[UIScrollView class]]) {
-            self.scrollView = (UIScrollView *)viewController.view;
-            [self setUpKVOForScrollView:self.scrollView];
-            
-            if (loadingView) {
-                UIEdgeInsets insets = self.scrollView.contentInset;
-                insets.top += kSGSegmentBarControllerBarHeight;
-                self.scrollView.contentInset = insets;
-                self.scrollView.contentOffset = CGPointMake(0, -insets.top);
-            }
+        if (![self hasLoadedViewController:viewController]) {
+            UIEdgeInsets insets = self.scrollView.contentInset;
+            insets.top += kSGSegmentBarControllerBarHeight;
+            self.scrollView.contentInset = insets;
+            self.scrollView.scrollIndicatorInsets = insets;
+            self.scrollView.contentOffset = CGPointMake(0, -insets.top);
+            [self setHasLoadedViewController:viewController];
         }
-        
-        [self.view bringSubviewToFront:self.segmentBar];
     }
+    
+    [self.view bringSubviewToFront:self.segmentBar];
 }
 
 - (void)unloadViewController:(UIViewController *)viewController {
@@ -200,6 +214,14 @@ static const CGFloat kSGSegmentBarControllerBarHeight = 44.0;
         self.scrollView = nil;
     }
 }
+
+//- (void)transitionFromViewController:(UIViewController *)fromViewController toViewController:(UIViewController *)toViewController {
+//    [self transitionFromViewController:fromViewController toViewController:toViewController duration:0.3 options:UIViewAnimationOptionCurveEaseOut animations:^{
+//        
+//    } completion:^(BOOL finished) {
+//        
+//    }];
+//}
 
 - (void)loadViewControllerTitles {
     [self.segmentBar.segmentedControl removeAllSegments];
@@ -254,6 +276,8 @@ static const CGFloat kSGSegmentBarControllerBarHeight = 44.0;
     _selectedIndex = selectedIndex;
     [self setSelectedViewController:self.viewControllers[selectedIndex]];
     self.segmentBar.segmentedControl.selectedSegmentIndex = selectedIndex;
+    self.titleView.detailLabel.text = [self titleForViewControllerAtIndex:selectedIndex];
+    [self.titleView sizeToFit];
 }
 
 - (void)setViewControllers:(NSArray *)viewControllers {
@@ -261,12 +285,17 @@ static const CGFloat kSGSegmentBarControllerBarHeight = 44.0;
         return;
     }
     
-    [self unloadViewController:self.selectedViewController];
+    for (UIViewController *controller in self.viewControllers) {
+        controller.segmentBarController = nil;
+    }
     
+    [self unloadViewController:self.selectedViewController];
+    self.viewLoadedMap = [NSMutableArray arrayWithCapacity:[viewControllers count]];
     _viewControllers = viewControllers;
     
     for (UIViewController *controller in viewControllers) {
         controller.segmentBarController = self;
+        [self.viewLoadedMap addObject:@NO];
     }
     
     if (self.isViewLoaded) {
@@ -345,5 +374,17 @@ static const CGFloat kSGSegmentBarControllerBarHeight = 44.0;
         }
     }
 }
+
+//#pragma mark - Controller transitions
+//
+//- (id<UIViewControllerAnimatedTransitioning>)animationControllerForPresentedController:(UIViewController *)presented presentingController:(UIViewController *)presenting sourceController:(UIViewController *)source {
+//    NSUInteger presentedIndex = [self.viewControllers indexOfObject:presented];
+//    if (presentedIndex == NSNotFound) {
+//        return nil;
+//    }
+//    SGSegmentBarControllerTransitionAnimator *animator = [[SGSegmentBarControllerTransitionAnimator alloc] init];
+//    animator.leftToRight = presentedIndex < self.selectedIndex;
+//    return animator;
+//}
 
 @end
