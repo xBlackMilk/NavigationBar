@@ -22,6 +22,7 @@
         [self addSubview:self.segmentedControl];
         [self updateSegmentedControlFrame];
         self.clipsToBounds = YES;
+        self.backgroundColor = [UIColor whiteColor];
     }
     return self;
 }

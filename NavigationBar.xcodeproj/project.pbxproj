@@ -16,13 +16,15 @@
 		01AABE8317B46F3B0090B699 /* SGSegmentBarController.m in Sources */ = {isa = PBXBuildFile; fileRef = 01AABE8217B46F3B0090B699 /* SGSegmentBarController.m */; };
 		01AABE8617B46FA00090B699 /* SGSegmentBar.m in Sources */ = {isa = PBXBuildFile; fileRef = 01AABE8517B46FA00090B699 /* SGSegmentBar.m */; };
 		01AABE8917B491990090B699 /* SGCrossfadingLabelView.m in Sources */ = {isa = PBXBuildFile; fileRef = 01AABE8817B491990090B699 /* SGCrossfadingLabelView.m */; };
+		01AABE8C17B99B790090B699 /* SGTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 01AABE8B17B99B790090B699 /* SGTableViewController.m */; };
+		01AABE8F17B99D1F0090B699 /* SGTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 01AABE8E17B99D1F0090B699 /* SGTableViewCell.m */; };
+		01AABE9217B99DC40090B699 /* UIImageView+Additions.m in Sources */ = {isa = PBXBuildFile; fileRef = 01AABE9117B99DC40090B699 /* UIImageView+Additions.m */; };
 		01B483BC179DEC43008C6559 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B483BB179DEC43008C6559 /* Foundation.framework */; };
 		01B483BE179DEC43008C6559 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B483BD179DEC43008C6559 /* CoreGraphics.framework */; };
 		01B483C0179DEC43008C6559 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B483BF179DEC43008C6559 /* UIKit.framework */; };
 		01B483C6179DEC43008C6559 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 01B483C4179DEC43008C6559 /* InfoPlist.strings */; };
 		01B483C8179DEC43008C6559 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 01B483C7179DEC43008C6559 /* main.m */; };
 		01B483CC179DEC43008C6559 /* SGAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 01B483CB179DEC43008C6559 /* SGAppDelegate.m */; };
-		01B483D2179DEC43008C6559 /* SGMasterViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 01B483D1179DEC43008C6559 /* SGMasterViewController.m */; };
 		01B483D5179DEC43008C6559 /* SGDetailViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 01B483D4179DEC43008C6559 /* SGDetailViewController.m */; };
 		01B483D7179DEC43008C6559 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 01B483D6179DEC43008C6559 /* Images.xcassets */; };
 		01B483DE179DEC43008C6559 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B483DD179DEC43008C6559 /* XCTest.framework */; };
@@ -65,6 +67,12 @@
 		01AABE8517B46FA00090B699 /* SGSegmentBar.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGSegmentBar.m; sourceTree = "<group>"; };
 		01AABE8717B491990090B699 /* SGCrossfadingLabelView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGCrossfadingLabelView.h; sourceTree = "<group>"; };
 		01AABE8817B491990090B699 /* SGCrossfadingLabelView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGCrossfadingLabelView.m; sourceTree = "<group>"; };
+		01AABE8A17B99B790090B699 /* SGTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGTableViewController.h; sourceTree = "<group>"; };
+		01AABE8B17B99B790090B699 /* SGTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGTableViewController.m; sourceTree = "<group>"; };
+		01AABE8D17B99D1F0090B699 /* SGTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SGTableViewCell.h; sourceTree = "<group>"; };
+		01AABE8E17B99D1F0090B699 /* SGTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SGTableViewCell.m; sourceTree = "<group>"; };
+		01AABE9017B99DC40090B699 /* UIImageView+Additions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImageView+Additions.h"; sourceTree = "<group>"; };
+		01AABE9117B99DC40090B699 /* UIImageView+Additions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImageView+Additions.m"; sourceTree = "<group>"; };
 		01B483B8179DEC43008C6559 /* NavigationBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NavigationBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		01B483BB179DEC43008C6559 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		01B483BD179DEC43008C6559 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -75,8 +83,6 @@
 		01B483C9179DEC43008C6559 /* NavigationBar-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NavigationBar-Prefix.pch"; sourceTree = "<group>"; };
 		01B483CA179DEC43008C6559 /* SGAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SGAppDelegate.h; sourceTree = "<group>"; };
 		01B483CB179DEC43008C6559 /* SGAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SGAppDelegate.m; sourceTree = "<group>"; };
-		01B483D0179DEC43008C6559 /* SGMasterViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SGMasterViewController.h; sourceTree = "<group>"; };
-		01B483D1179DEC43008C6559 /* SGMasterViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SGMasterViewController.m; sourceTree = "<group>"; };
 		01B483D3179DEC43008C6559 /* SGDetailViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SGDetailViewController.h; sourceTree = "<group>"; };
 		01B483D4179DEC43008C6559 /* SGDetailViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SGDetailViewController.m; sourceTree = "<group>"; };
 		01B483D6179DEC43008C6559 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
@@ -155,14 +161,18 @@
 				01B483CB179DEC43008C6559 /* SGAppDelegate.m */,
 				015C646F17A096DC005D5B09 /* SGViewTableViewController.h */,
 				015C647017A096DC005D5B09 /* SGViewTableViewController.m */,
+				01AABE8A17B99B790090B699 /* SGTableViewController.h */,
+				01AABE8B17B99B790090B699 /* SGTableViewController.m */,
+				01AABE8D17B99D1F0090B699 /* SGTableViewCell.h */,
+				01AABE8E17B99D1F0090B699 /* SGTableViewCell.m */,
+				01AABE9017B99DC40090B699 /* UIImageView+Additions.h */,
+				01AABE9117B99DC40090B699 /* UIImageView+Additions.m */,
 				01AABE8117B46F3B0090B699 /* SGSegmentBarController.h */,
 				01AABE8217B46F3B0090B699 /* SGSegmentBarController.m */,
 				01AABE8417B46FA00090B699 /* SGSegmentBar.h */,
 				01AABE8517B46FA00090B699 /* SGSegmentBar.m */,
 				01AABE8717B491990090B699 /* SGCrossfadingLabelView.h */,
 				01AABE8817B491990090B699 /* SGCrossfadingLabelView.m */,
-				01B483D0179DEC43008C6559 /* SGMasterViewController.h */,
-				01B483D1179DEC43008C6559 /* SGMasterViewController.m */,
 				01B483D3179DEC43008C6559 /* SGDetailViewController.h */,
 				01B483D4179DEC43008C6559 /* SGDetailViewController.m */,
 				015C647217A0B440005D5B09 /* SGNavigationBar.h */,
@@ -316,10 +326,12 @@
 				015C646E179E27EC005D5B09 /* UIImage+ImageEffects.m in Sources */,
 				01B483C8179DEC43008C6559 /* main.m in Sources */,
 				015C647117A096DC005D5B09 /* SGViewTableViewController.m in Sources */,
+				01AABE8C17B99B790090B699 /* SGTableViewController.m in Sources */,
+				01AABE8F17B99D1F0090B699 /* SGTableViewCell.m in Sources */,
 				01AABE8317B46F3B0090B699 /* SGSegmentBarController.m in Sources */,
-				01B483D2179DEC43008C6559 /* SGMasterViewController.m in Sources */,
 				015C64AA17A3640C005D5B09 /* SGBlurView.m in Sources */,
 				01B483D5179DEC43008C6559 /* SGDetailViewController.m in Sources */,
+				01AABE9217B99DC40090B699 /* UIImageView+Additions.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

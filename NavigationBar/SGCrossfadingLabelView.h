@@ -14,4 +14,6 @@
 @property (nonatomic, readonly) UILabel *detailLabel;
 @property (nonatomic) CGFloat crossFade;
 
+- (void)setCrossFade:(CGFloat)crossFade animated:(BOOL)animated;
+
 @end

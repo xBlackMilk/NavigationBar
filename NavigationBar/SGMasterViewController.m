@@ -525,7 +525,7 @@ typedef enum : NSInteger {
                                                                                                              //          [header setShadowImage:[UIImage imageNamed:@"clearpix"]];
             UISegmentedControl *segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Topics",@"Popular",@"Recent"]];
             segmentedControl.backgroundColor = [UIColor colorWithRed:210.0/255.0 green:75.0/255.0 blue:10.0/255.0 alpha:1.0];
-            segmentedControl.tintColor = [UIColor colorWithWhite:1 alpha:1];//[UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
+            segmentedControl.tintColor = [UIColor colorWithRed:246.0/255.0 green:241.0/255.0 blue:234.0/255.0];//[UIColor colorWithRed:199.0/255.0 green:66.0/255.0 blue:25.0/255.0 alpha:1.0];
             segmentedControl.selectedSegmentIndex = 1;
             [segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
             CGRect frame = segmentedControl.frame;
