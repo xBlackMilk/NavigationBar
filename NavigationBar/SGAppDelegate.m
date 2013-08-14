@@ -43,7 +43,7 @@
     SGTableViewController *tvc3 = [[SGTableViewController alloc] init];
     SGSegmentBarController *sbc = [[SGSegmentBarController alloc] init];
     sbc.segmentBar.tintColor = [UIColor colorWithRed:246.0/255.0 green:241.0/255.0 blue:234.0/255.0 alpha:1.0];
-    sbc.segmentBar.segmentedControl.backgroundColor = [UIColor colorWithRed:193.0/255.0 green:64.0/255.0 blue:0.0 alpha:1.0];
+//    sbc.segmentBar.segmentedControl.backgroundColor = [UIColor colorWithRed:193.0/255.0 green:64.0/255.0 blue:0.0 alpha:1.0];
     sbc.segmentBar.backgroundColor = bar.barTintColor;
     sbc.title = @"Explore";
     tvc1.title = @"Popular";
@@ -55,6 +55,18 @@
     self.window.rootViewController = nav;
     [self.window makeKeyAndVisible];
     self.rootViewController = nav;
+    
+    UIImage *segmentSelected = [UIImage imageNamed:@"seg_ctrl_sel"];
+    UIImage *segmentUnselected = [UIImage imageNamed:@"seg_ctrl_un"];
+    UIImage *clearPixel = [UIImage imageNamed:@"clearpix"];
+    
+    id sca = [UISegmentedControl appearance];
+    
+    [sca setBackgroundImage:segmentUnselected forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    [sca setBackgroundImage:segmentSelected forState:UIControlStateSelected barMetrics:UIBarMetricsDefault];
+    [sca setBackgroundImage:segmentSelected forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+    [sca setDividerImage:clearPixel forLeftSegmentState:UIControlStateNormal rightSegmentState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    [sca setTitleTextAttributes:@{NSForegroundColorAttributeName: bar.barTintColor} forState:UIControlStateHighlighted];
     
     return YES;
 }
